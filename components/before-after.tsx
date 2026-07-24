@@ -80,23 +80,21 @@ export default function BeforeAfter({ beforeImage, afterImage, metrics }: Before
 
         {/* Slider Handle */}
         <div
-          className="absolute top-0 bottom-0 w-1 bg-[#d4a574] cursor-col-resize"
+          className="absolute top-0 bottom-0 w-0.5 bg-[#d4a574] cursor-col-resize"
           style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
         >
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="w-10 h-10 bg-[#d4a574] rounded-lg flex items-center justify-center shadow-lg">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="w-10 h-10 bg-[#d4a574] rounded-full flex items-center justify-center shadow-lg">
               <svg
                 className="w-5 h-5 text-[#1a1410]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
+                <path d="M9 4l-6 8 6 8M15 4l6 8-6 8" />
               </svg>
             </div>
           </div>

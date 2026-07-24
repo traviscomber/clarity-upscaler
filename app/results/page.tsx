@@ -1,152 +1,173 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Share2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+const metricData = [
+  {
+    key: 'fidelity',
+    label: 'Fidelity',
+    value: 94,
+    description: 'Color accuracy and tone preservation',
+  },
+  {
+    key: 'detail',
+    label: 'Detail Recovery',
+    value: 87,
+    description: 'Fine detail enhancement quality',
+  },
+  {
+    key: 'preservation',
+    label: 'Preservation',
+    value: 91,
+    description: 'Original content integrity',
+  },
+] as const;
+
+const exportFormats = [
+  { format: 'PNG', info: '13580 × 13580 · 8-bit lossless' },
+  { format: 'TIFF', info: '13580 × 13580 · 16-bit lossless' },
+  { format: 'WebP', info: '13580 × 13580 · 8-bit modern' },
+];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.12, delayChildren: 0.05 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 18 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
+};
+
 export default function ResultsPage() {
   const [comparisonPosition, setComparisonPosition] = useState(50);
   const [activeMetric, setActiveMetric] = useState<'fidelity' | 'detail' | 'preservation'>('fidelity');
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const metrics = {
-    fidelity: { label: 'Fidelity', value: 94, description: 'Color accuracy and tone preservation' },
-    detail: { label: 'Detail Recovery', value: 87, description: 'Fine detail enhancement quality' },
-    preservation: { label: 'Preservation Score', value: 91, description: 'Original content integrity' },
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.15, delayChildren: 0.1 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  const updatePosition = (clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    setComparisonPosition(pct);
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-b border-border bg-surface sticky top-0 z-50">
+    <div className="text-[#e8e4dd]">
+      {/* Page header */}
+      <div className="border-b border-[#3a3530] bg-[#1f1a16] sticky top-[57px] z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/studio" className="flex items-center gap-2 text-sm hover:text-accent-gold transition-colors">
-            <ArrowLeft size={16} />
+          <Link
+            href="/studio"
+            className="flex items-center gap-2 text-sm text-[#8b8278] hover:text-[#d4a574] transition-colors"
+          >
+            <ArrowLeft size={15} />
             Back to Studio
           </Link>
-          <h1 className="text-lg font-semibold">Enhancement Results</h1>
-          <div className="w-20" />
+          <h1 className="text-sm font-semibold text-[#e8e4dd]">Enhancement Results</h1>
+          <div className="w-28" />
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-8">
+      <main className="max-w-7xl mx-auto px-6 py-10">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-10"
+        >
           {/* Comparison Viewer */}
           <motion.section variants={itemVariants} className="space-y-4">
-            <h2 className="text-2xl font-light tracking-wide">Before / After Comparison</h2>
-            
-            <div className="relative w-full bg-surface-elevated rounded-lg overflow-hidden border border-border group">
-              <div className="relative w-full aspect-video bg-muted">
-                {/* Before Image */}
-                <div className="absolute inset-0 bg-gradient-to-br from-surface to-surface-elevated flex items-center justify-center">
+            <h2 className="text-xl font-semibold tracking-tight">Before / After</h2>
+
+            <div
+              ref={containerRef}
+              className="relative w-full aspect-video bg-[#1f1a16] rounded-xl overflow-hidden border border-[#3a3530] cursor-col-resize select-none"
+              onMouseDown={(e) => { setIsDragging(true); updatePosition(e.clientX); }}
+              onMouseMove={(e) => { if (isDragging) updatePosition(e.clientX); }}
+              onMouseUp={() => setIsDragging(false)}
+              onMouseLeave={() => setIsDragging(false)}
+              onTouchStart={(e) => updatePosition(e.touches[0].clientX)}
+              onTouchMove={(e) => updatePosition(e.touches[0].clientX)}
+            >
+              {/* After (full width underneath) */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#d4a574]/5 to-[#2d2620]">
+                <div className="text-center space-y-2">
+                  <div className="w-14 h-14 mx-auto rounded-lg bg-[#d4a574]/20 border border-[#d4a574]/30" />
+                  <p className="text-xs text-[#d4a574]">Enhanced · 13580 × 13580px</p>
+                </div>
+              </div>
+
+              {/* Before (clipped) */}
+              <div
+                className="absolute inset-0 overflow-hidden"
+                style={{ width: `${comparisonPosition}%` }}
+              >
+                <div className="absolute inset-0 w-screen flex items-center justify-center bg-[#2d2620]">
                   <div className="text-center space-y-2">
-                    <div className="w-16 h-16 mx-auto rounded bg-border/50" />
-                    <p className="text-sm text-muted">Original: 3395 × 3395px</p>
+                    <div className="w-14 h-14 mx-auto rounded-lg bg-[#3a3530]" />
+                    <p className="text-xs text-[#8b8278]">Original · 3395 × 3395px</p>
                   </div>
                 </div>
+              </div>
 
-                {/* After Image (Comparison overlay) */}
-                <div
-                  className="absolute inset-0 bg-gradient-to-br from-accent-gold/10 to-accent-gold/5 overflow-hidden"
-                  style={{ width: `${comparisonPosition}%` }}
-                >
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center space-y-2">
-                      <div className="w-16 h-16 mx-auto rounded bg-accent-gold/30" />
-                      <p className="text-sm text-accent-gold">Enhanced: 13580 × 13580px</p>
-                    </div>
-                  </div>
+              {/* Divider */}
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-[#d4a574] pointer-events-none"
+                style={{ left: `${comparisonPosition}%` }}
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#d4a574] flex items-center justify-center shadow-lg">
+                  <svg width="16" height="16" fill="none" stroke="#1a1410" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 4l-6 8 6 8M15 4l6 8-6 8" />
+                  </svg>
                 </div>
+              </div>
 
-                {/* Divider Handle */}
-                <div
-                  className="absolute top-0 bottom-0 w-1 bg-accent-gold cursor-col-resize hover:w-2 transition-all"
-                  style={{ left: `${comparisonPosition}%` }}
-                  onMouseMove={(e) => {
-                    if (e.buttons === 1) {
-                      const rect = e.currentTarget.parentElement!.getBoundingClientRect();
-                      const newPosition = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-                      setComparisonPosition(newPosition);
-                    }
-                  }}
-                />
-
-                {/* Label badges */}
-                <div className="absolute bottom-4 left-4 px-3 py-1 bg-surface/80 backdrop-blur rounded text-sm border border-border">
-                  Original
-                </div>
-                <div className="absolute bottom-4 right-4 px-3 py-1 bg-accent-gold/20 backdrop-blur rounded text-sm border border-accent-gold/30">
-                  Enhanced
-                </div>
+              {/* Labels */}
+              <div className="absolute top-4 left-4 px-3 py-1.5 bg-[#1a1410]/80 backdrop-blur-sm rounded-md text-xs text-[#e8e4dd] border border-[#3a3530] pointer-events-none">
+                Original
+              </div>
+              <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#d4a574]/20 backdrop-blur-sm rounded-md text-xs text-[#d4a574] border border-[#d4a574]/30 pointer-events-none">
+                Enhanced
               </div>
             </div>
           </motion.section>
 
           {/* Quality Metrics */}
-          <motion.section variants={itemVariants} className="space-y-6">
-            <h2 className="text-2xl font-light tracking-wide">Quality Metrics</h2>
-
+          <motion.section variants={itemVariants} className="space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight">Quality Metrics</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(['fidelity', 'detail', 'preservation'] as const).map((metric) => (
+              {metricData.map(({ key, label, value, description }) => (
                 <motion.button
-                  key={metric}
-                  onClick={() => setActiveMetric(metric)}
+                  key={key}
+                  onClick={() => setActiveMetric(key)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`p-6 rounded-lg border transition-all ${
-                    activeMetric === metric
-                      ? 'bg-accent-gold/10 border-accent-gold'
-                      : 'bg-surface border-border hover:border-accent-gold/50'
+                  className={`p-6 rounded-xl border text-left transition-colors ${
+                    activeMetric === key
+                      ? 'bg-[#d4a574]/8 border-[#d4a574]'
+                      : 'bg-[#1f1a16] border-[#3a3530] hover:border-[#d4a574]/40'
                   }`}
                 >
-                  <div className="text-left space-y-3">
-                    <div className="text-sm text-muted">{metrics[metric].label}</div>
-                    <div className="text-3xl font-light text-accent-gold">{metrics[metric].value}%</div>
-                    <div className="w-full h-1 bg-border rounded-full overflow-hidden">
+                  <div className="space-y-3">
+                    <p className="text-xs text-[#8b8278] uppercase tracking-wider">{label}</p>
+                    <p className="text-4xl font-light text-[#d4a574]">{value}%</p>
+                    <div className="w-full h-0.5 bg-[#3a3530] rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-accent-gold"
+                        className="h-full bg-[#d4a574]"
                         initial={{ width: 0 }}
-                        animate={{ width: `${metrics[metric].value}%` }}
-                        transition={{ duration: 1, delay: 0.2 }}
+                        animate={{ width: `${value}%` }}
+                        transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
                       />
                     </div>
-                    <p className="text-xs text-muted/70">{metrics[metric].description}</p>
+                    <p className="text-xs text-[#8b8278] leading-relaxed">{description}</p>
                   </div>
-                </motion.button>
-              ))}
-            </div>
-          </motion.section>
-
-          {/* Export Options */}
-          <motion.section variants={itemVariants} className="space-y-4">
-            <h2 className="text-2xl font-light tracking-wide">Export</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {['PNG', 'TIFF', 'WebP'].map((format) => (
-                <motion.button
-                  key={format}
-                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(212, 165, 116, 0.1)' }}
-                  whileTap={{ scale: 0.98 }}
-                  className="p-4 border border-border rounded-lg hover:border-accent-gold transition-colors flex items-center justify-between group"
-                >
-                  <div className="text-left">
-                    <div className="font-medium">{format}</div>
-                    <div className="text-xs text-muted">13580 × 13580 @ 8-bit</div>
-                  </div>
-                  <Download size={18} className="text-muted group-hover:text-accent-gold transition-colors" />
                 </motion.button>
               ))}
             </div>
@@ -154,39 +175,60 @@ export default function ResultsPage() {
 
           {/* Enhancement Details */}
           <motion.section variants={itemVariants} className="space-y-4">
-            <h2 className="text-2xl font-light tracking-wide">Enhancement Details</h2>
-
+            <h2 className="text-xl font-semibold tracking-tight">Enhancement Details</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-surface border border-border rounded-lg">
-                <div className="text-xs text-muted mb-1">Original Resolution</div>
-                <div className="text-lg font-light">3395 × 3395</div>
-              </div>
-              <div className="p-4 bg-surface border border-border rounded-lg">
-                <div className="text-xs text-muted mb-1">Enhanced Resolution</div>
-                <div className="text-lg font-light text-accent-gold">13580 × 13580</div>
-              </div>
-              <div className="p-4 bg-surface border border-border rounded-lg">
-                <div className="text-xs text-muted mb-1">Scale Factor</div>
-                <div className="text-lg font-light">4×</div>
-              </div>
-              <div className="p-4 bg-surface border border-border rounded-lg">
-                <div className="text-xs text-muted mb-1">Processing Time</div>
-                <div className="text-lg font-light">3.2s</div>
-              </div>
+              {[
+                { label: 'Original Resolution', value: '3395 × 3395', accent: false },
+                { label: 'Enhanced Resolution', value: '13580 × 13580', accent: true },
+                { label: 'Scale Factor', value: '4×', accent: false },
+                { label: 'Processing Time', value: '3.2s', accent: false },
+              ].map(({ label, value, accent }) => (
+                <div
+                  key={label}
+                  className="p-5 bg-[#1f1a16] border border-[#3a3530] rounded-xl"
+                >
+                  <p className="text-xs text-[#8b8278] mb-2 uppercase tracking-wider">{label}</p>
+                  <p className={`text-base font-light ${accent ? 'text-[#d4a574]' : 'text-[#e8e4dd]'}`}>
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+
+          {/* Export */}
+          <motion.section variants={itemVariants} className="space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight">Export</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {exportFormats.map(({ format, info }) => (
+                <motion.button
+                  key={format}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="p-5 border border-[#3a3530] rounded-xl hover:border-[#d4a574]/50 hover:bg-[#d4a574]/5 transition-colors flex items-center justify-between group"
+                >
+                  <div className="text-left">
+                    <p className="font-semibold text-sm text-[#e8e4dd]">{format}</p>
+                    <p className="text-xs text-[#8b8278] mt-0.5">{info}</p>
+                  </div>
+                  <Download
+                    size={17}
+                    className="text-[#8b8278] group-hover:text-[#d4a574] transition-colors flex-shrink-0"
+                    strokeWidth={1.5}
+                  />
+                </motion.button>
+              ))}
             </div>
           </motion.section>
 
           {/* Actions */}
-          <motion.div
-            variants={itemVariants}
-            className="flex gap-4 pt-4"
-          >
-            <button className="flex-1 px-6 py-3 bg-accent-gold text-background rounded-lg font-medium hover:bg-accent-gold-light transition-colors flex items-center justify-center gap-2">
-              <Download size={18} />
+          <motion.div variants={itemVariants} className="flex gap-4 pt-2">
+            <button className="flex-1 px-6 py-3.5 bg-[#d4a574] text-[#1a1410] rounded-lg font-semibold text-sm hover:bg-[#e8d9c7] transition-colors flex items-center justify-center gap-2 active:scale-95 transform">
+              <Download size={16} strokeWidth={2} />
               Download Enhanced Image
             </button>
-            <button className="flex-1 px-6 py-3 border border-border rounded-lg hover:border-accent-gold hover:text-accent-gold transition-colors flex items-center justify-center gap-2">
-              <Share2 size={18} />
+            <button className="flex-1 px-6 py-3.5 border border-[#3a3530] rounded-lg text-sm hover:border-[#d4a574]/50 hover:text-[#d4a574] transition-colors flex items-center justify-center gap-2 active:scale-95 transform">
+              <Share2 size={16} strokeWidth={1.5} />
               Share Results
             </button>
           </motion.div>
