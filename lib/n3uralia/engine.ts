@@ -56,7 +56,7 @@ export async function processImage(
   const strategy = selectStrategy(analysis, options);
 
   // Step 3: Enhance image
-  const enhancedBuffer = await enhanceImage(imageBuffer, strategy);
+  const enhanced = await enhanceImage(imageBuffer, strategy);
 
   // Step 4: Evaluate quality
   const metrics = {
@@ -73,7 +73,7 @@ export async function processImage(
     metrics,
     processingTime,
     originalSize: imageBuffer.length,
-    enhancedSize: enhancedBuffer.length,
+    enhancedSize: enhanced.buffer.length,
   };
 }
 

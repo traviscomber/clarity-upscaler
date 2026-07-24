@@ -43,9 +43,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Process image
+    // Process image through the real N3uralia engine
     const startTime = Date.now();
-    const enhancedBuffer = await enhanceImage(buffer, strategy);
+    const enhanced = await enhanceImage(buffer, strategy);
     const processingTime = Date.now() - startTime;
 
     // Calculate quality metrics
@@ -53,11 +53,13 @@ export async function POST(request: Request) {
 
     // Return response with metadata
     const responseHeaders = {
-      'Content-Type': 'image/jpeg',
-      'Content-Length': String(enhancedBuffer.length),
+      'Content-Type': enhanced.contentType,
+      'Content-Length': String(enhanced.buffer.length),
       'X-Processing-Time': String(processingTime),
       'X-Original-Size': String(buffer.length),
-      'X-Enhanced-Size': String(enhancedBuffer.length),
+      'X-Enhanced-Size': String(enhanced.buffer.length),
+      'X-Output-Width': String(enhanced.width),
+      'X-Output-Height': String(enhanced.height),
       'X-Scale-Factor': String(strategy.scaleFactor),
       'X-Model': strategy.model,
       'X-Fidelity': String(Math.round(metrics.fidelity * 100)),
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
       'X-Preservation': String(Math.round(metrics.preservation * 100)),
     };
 
-    return new Response(new Uint8Array(enhancedBuffer), {
+    return new Response(new Uint8Array(enhanced.buffer), {
       headers: responseHeaders,
     });
   } catch (error) {

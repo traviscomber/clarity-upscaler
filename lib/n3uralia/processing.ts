@@ -1,123 +1,146 @@
 /**
- * Processing Pipeline - Execute enhancement operations
+ * N3uralia Processing Pipeline
+ * Real server-side image enhancement powered by sharp (Lanczos resampling,
+ * model-aware sharpening, denoise, and format-preserving encode).
  */
 
+import sharp from 'sharp';
 import type { EnhancementStrategy } from './engine';
 
+export interface EnhanceOutput {
+  buffer: Buffer;
+  width: number;
+  height: number;
+  format: 'jpeg' | 'png' | 'webp';
+  contentType: string;
+}
+
+// Cap the output so extreme scale factors can't exhaust memory.
+const MAX_OUTPUT_PIXELS = 40_000_000; // 40 MP ceiling
+
 /**
- * Apply N3uralia enhancement to image
- * Simulates upscaling by processing the image buffer
+ * Model-specific tuning. Each N3uralia model maps to a distinct
+ * sharpening/denoise profile applied after upscaling.
+ */
+function getModelProfile(model: string): {
+  sharpenSigma: number;
+  denoise: boolean;
+  saturation: number;
+} {
+  switch (model) {
+    case 'Face Restoration':
+      // Gentle on skin, light denoise, neutral color.
+      return { sharpenSigma: 0.6, denoise: true, saturation: 1.0 };
+    case 'Nature Enhanced':
+      // Punchy detail and slightly richer color for foliage/landscapes.
+      return { sharpenSigma: 1.1, denoise: false, saturation: 1.08 };
+    case 'Architecture v1':
+      // Crisp edges for lines and structure, no color shift.
+      return { sharpenSigma: 1.3, denoise: false, saturation: 1.0 };
+    case 'Clean Detail':
+      // Balanced sharpening with denoise for noisy sources.
+      return { sharpenSigma: 0.9, denoise: true, saturation: 1.02 };
+    default:
+      // Full Spectrum / fallback.
+      return { sharpenSigma: 1.0, denoise: false, saturation: 1.03 };
+  }
+}
+
+/**
+ * Apply N3uralia enhancement to an image buffer.
+ * Performs real Lanczos upscaling + model-aware post-processing.
  */
 export async function enhanceImage(
   imageBuffer: Buffer,
   strategy: EnhancementStrategy
-): Promise<Buffer> {
-  // Validate input
+): Promise<EnhanceOutput> {
   if (!imageBuffer || imageBuffer.length === 0) {
     throw new Error('Invalid image buffer');
   }
 
-  // Detect image format
-  const format = detectImageFormat(imageBuffer);
-  
-  // Apply enhancement based on strategy
-  const enhancedBuffer = await processImageBuffer(
-    imageBuffer,
-    strategy,
-    format
-  );
+  // Respect EXIF orientation, then read true dimensions.
+  const pipeline = sharp(imageBuffer, { failOn: 'none' }).rotate();
+  const metadata = await pipeline.metadata();
 
-  return enhancedBuffer;
+  const srcWidth = metadata.width ?? 0;
+  const srcHeight = metadata.height ?? 0;
+  if (!srcWidth || !srcHeight) {
+    throw new Error('Unable to read image dimensions');
+  }
+
+  // Compute target size, clamped to the pixel ceiling.
+  let targetWidth = Math.round(srcWidth * strategy.scaleFactor);
+  let targetHeight = Math.round(srcHeight * strategy.scaleFactor);
+  const targetPixels = targetWidth * targetHeight;
+  if (targetPixels > MAX_OUTPUT_PIXELS) {
+    const ratio = Math.sqrt(MAX_OUTPUT_PIXELS / targetPixels);
+    targetWidth = Math.round(targetWidth * ratio);
+    targetHeight = Math.round(targetHeight * ratio);
+  }
+
+  const profile = getModelProfile(strategy.model);
+
+  // High-quality upscale using Lanczos3 resampling.
+  let processed = pipeline.resize(targetWidth, targetHeight, {
+    kernel: sharp.kernel.lanczos3,
+    fit: 'fill',
+  });
+
+  // Optional denoise for noisy / low-quality sources.
+  if (profile.denoise) {
+    processed = processed.median(3);
+  }
+
+  // Detail recovery via unsharp masking. Heavier for "quality" target.
+  const sigma =
+    strategy.qualityTarget === 'quality'
+      ? profile.sharpenSigma * 1.2
+      : strategy.qualityTarget === 'speed'
+        ? profile.sharpenSigma * 0.7
+        : profile.sharpenSigma;
+  processed = processed.sharpen({ sigma });
+
+  // Subtle color enrichment where the model calls for it.
+  if (profile.saturation !== 1.0) {
+    processed = processed.modulate({ saturation: profile.saturation });
+  }
+
+  // Encode preserving the source format (PNG keeps alpha; WebP stays WebP).
+  const inputFormat = metadata.format;
+  let outBuffer: Buffer;
+  let outFormat: EnhanceOutput['format'];
+  let contentType: string;
+
+  if (inputFormat === 'png') {
+    outBuffer = await processed.png({ compressionLevel: 9 }).toBuffer();
+    outFormat = 'png';
+    contentType = 'image/png';
+  } else if (inputFormat === 'webp') {
+    outBuffer = await processed
+      .webp({ quality: strategy.qualityTarget === 'speed' ? 82 : 92 })
+      .toBuffer();
+    outFormat = 'webp';
+    contentType = 'image/webp';
+  } else {
+    // JPEG and everything else encode to high-quality JPEG.
+    outBuffer = await processed
+      .jpeg({ quality: strategy.qualityTarget === 'speed' ? 84 : 94, mozjpeg: true })
+      .toBuffer();
+    outFormat = 'jpeg';
+    contentType = 'image/jpeg';
+  }
+
+  return {
+    buffer: outBuffer,
+    width: targetWidth,
+    height: targetHeight,
+    format: outFormat,
+    contentType,
+  };
 }
 
 /**
- * Detect image format from buffer signature
- */
-function detectImageFormat(buffer: Buffer): 'jpeg' | 'png' | 'webp' | 'unknown' {
-  if (buffer.length < 4) return 'unknown';
-
-  // JPEG signature: FF D8 FF
-  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-    return 'jpeg';
-  }
-
-  // PNG signature: 89 50 4E 47
-  if (
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4e &&
-    buffer[3] === 0x47
-  ) {
-    return 'png';
-  }
-
-  // WebP signature: RIFF ... WEBP
-  if (
-    buffer[0] === 0x52 &&
-    buffer[1] === 0x49 &&
-    buffer[2] === 0x46 &&
-    buffer[3] === 0x46
-  ) {
-    if (
-      buffer[8] === 0x57 &&
-      buffer[9] === 0x45 &&
-      buffer[10] === 0x42 &&
-      buffer[11] === 0x50
-    ) {
-      return 'webp';
-    }
-  }
-
-  return 'unknown';
-}
-
-/**
- * Process image buffer based on enhancement strategy
- */
-async function processImageBuffer(
-  imageBuffer: Buffer,
-  strategy: EnhancementStrategy,
-  format: string
-): Promise<Buffer> {
-  // Simulate processing time based on scale factor
-  const processingDelay = strategy.scaleFactor * 500;
-  await new Promise(resolve => setTimeout(resolve, processingDelay));
-
-  // Calculate output size based on upscaling
-  // Typical upscaling increases file size by ~(scaleFactor^2 * 0.8) due to compression
-  const compressionRatio =
-    strategy.qualityTarget === 'quality' ? 0.85 : 0.7;
-  const upscaledSize = Math.round(
-    imageBuffer.length * (strategy.scaleFactor * strategy.scaleFactor) * compressionRatio
-  );
-
-  // Create enhanced buffer with enhanced metadata
-  const enhancedBuffer = Buffer.alloc(upscaledSize);
-
-  // Preserve image format signature in output
-  if (format === 'jpeg') {
-    // Add JPEG markers
-    enhancedBuffer[0] = 0xff;
-    enhancedBuffer[1] = 0xd8;
-    enhancedBuffer[2] = 0xff;
-  } else if (format === 'png') {
-    // Add PNG signature
-    enhancedBuffer[0] = 0x89;
-    enhancedBuffer[1] = 0x50;
-    enhancedBuffer[2] = 0x4e;
-    enhancedBuffer[3] = 0x47;
-  }
-
-  // Fill buffer with pseudo-random data (simulating enhanced image content)
-  for (let i = (format === 'png' ? 4 : 3); i < enhancedBuffer.length; i++) {
-    enhancedBuffer[i] = Math.floor(Math.random() * 256);
-  }
-
-  return enhancedBuffer;
-}
-
-/**
- * Validate enhancement strategy is compatible with image
+ * Validate enhancement strategy is compatible with the request.
  */
 export function validateStrategy(
   _imageBuffer: Buffer,
@@ -140,27 +163,20 @@ export function validateStrategy(
 }
 
 /**
- * Get quality metrics for enhanced image
+ * Get quality metrics for the enhanced image based on strategy parameters.
  */
-export function getQualityMetrics(
-  strategy: EnhancementStrategy
-): {
+export function getQualityMetrics(strategy: EnhancementStrategy): {
   fidelity: number;
   detail: number;
   preservation: number;
 } {
-  // Quality metrics are calculated based on strategy parameters
   const baseQuality = 0.85;
   const qualityBoost = strategy.qualityTarget === 'quality' ? 0.15 : 0.05;
 
   return {
-    // Fidelity: how closely upscaled image matches the original
     fidelity: Math.min(baseQuality + qualityBoost, 0.99),
-    
-    // Detail: amount of fine detail captured
     detail: Math.min(baseQuality + qualityBoost - 0.03, 0.96),
-    
-    // Preservation: how well original information is maintained
-    preservation: strategy.preservationLevel * (1 - 0.01 * (strategy.scaleFactor - 1)),
+    preservation:
+      strategy.preservationLevel * (1 - 0.01 * (strategy.scaleFactor - 1)),
   };
 }
