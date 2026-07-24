@@ -5,25 +5,25 @@ import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#050505] text-[#F5F5F2]">
+    <div className="min-h-screen bg-[#1a1410] text-[#e8e4dd]">
       {/* Navigation */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="border-b border-[#262626] bg-[#101010]"
+        className="border-b border-[#3a3530] bg-[#1f1a16]"
       >
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-[#FFFFFF]">Clar1ty</h1>
           <nav className="flex gap-8">
             <Link
               href="/studio"
-              className="px-4 py-2 text-[#F5F5F2] hover:text-[#7FE7D8] transition-colors"
+              className="px-4 py-2 text-[#e8e4dd] hover:text-[#d4a574] transition-colors"
             >
               Studio
             </Link>
             <Link
               href="/models"
-              className="px-4 py-2 text-[#F5F5F2] hover:text-[#7FE7D8] transition-colors"
+              className="px-4 py-2 text-[#e8e4dd] hover:text-[#d4a574] transition-colors"
             >
               Models
             </Link>
@@ -48,7 +48,7 @@ export default function Home() {
                 height="40"
                 patternUnits="userSpaceOnUse"
               >
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#7FE7D8" />
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d4a574" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
@@ -65,19 +65,19 @@ export default function Home() {
           <motion.div
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 3, repeat: Infinity }}
-            className="text-[#7FE7D8] text-sm font-mono mb-6"
+            className="text-[#d4a574] text-sm font-mono mb-6"
           >
             Powered by N3uralia Engine
           </motion.div>
 
           <h1 className="text-6xl md:text-7xl font-bold mb-6 text-balance">
             Professional Image{' '}
-            <span className="bg-gradient-to-r from-[#7FE7D8] to-[#5B8CFF] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#d4a574] to-[#d4a574] bg-clip-text text-transparent">
               Upscaling
             </span>
           </h1>
 
-          <p className="text-[#8A8A8A] text-xl md:text-2xl mb-12 text-balance max-w-2xl mx-auto">
+          <p className="text-[#8b8278] text-xl md:text-2xl mb-12 text-balance max-w-2xl mx-auto">
             Intelligent upscaling that preserves original quality while enhancing
             detail. Built for creative professionals who demand precision.
           </p>
@@ -91,8 +91,8 @@ export default function Home() {
             <Link
               href="/studio"
               className="
-                px-8 py-4 rounded-lg bg-[#5B8CFF] text-[#050505] font-semibold
-                hover:bg-[#7FE7D8] transition-all transform hover:scale-105
+                px-8 py-4 rounded-lg bg-[#d4a574] text-[#1a1410] font-semibold
+                hover:bg-[#d4a574] transition-all transform hover:scale-105
                 active:scale-95 shadow-lg hover:shadow-xl
               "
             >
@@ -101,8 +101,8 @@ export default function Home() {
             <Link
               href="/models"
               className="
-                px-8 py-4 rounded-lg border border-[#262626] text-[#F5F5F2] font-semibold
-                hover:border-[#5B8CFF] transition-all transform hover:scale-105
+                px-8 py-4 rounded-lg border border-[#3a3530] text-[#e8e4dd] font-semibold
+                hover:border-[#d4a574] transition-all transform hover:scale-105
                 active:scale-95
               "
             >
@@ -117,13 +117,13 @@ export default function Home() {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative py-24 px-6 border-t border-[#262626]"
+        className="relative py-24 px-6 border-t border-[#3a3530]"
       >
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold text-center mb-4">
             Why Choose Clar1ty
           </h2>
-          <p className="text-[#8A8A8A] text-center max-w-2xl mx-auto mb-16">
+          <p className="text-[#8b8278] text-center max-w-2xl mx-auto mb-16">
             Built on principles of clarity, precision, and professional-grade quality.
           </p>
 
@@ -169,13 +169,13 @@ export default function Home() {
               <motion.div
                 key={idx}
                 whileHover={{ scale: 1.05, y: -5 }}
-                className="bg-[#101010] border border-[#262626] rounded-lg p-8 hover:border-[#5B8CFF] transition-all"
+                className="bg-[#1f1a16] border border-[#3a3530] rounded-lg p-8 hover:border-[#d4a574] transition-all"
               >
                 <div className="text-5xl mb-4">{feature.icon}</div>
-                <h3 className="text-[#F5F5F2] font-semibold text-lg mb-3">
+                <h3 className="text-[#e8e4dd] font-semibold text-lg mb-3">
                   {feature.title}
                 </h3>
-                <p className="text-[#8A8A8A]">{feature.description}</p>
+                <p className="text-[#8b8278]">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -187,18 +187,18 @@ export default function Home() {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative py-24 px-6 bg-[#101010] border-t border-[#262626]"
+        className="relative py-24 px-6 bg-[#1f1a16] border-t border-[#3a3530]"
       >
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to Upscale?</h2>
-          <p className="text-[#8A8A8A] text-lg mb-12 max-w-2xl mx-auto">
+          <p className="text-[#8b8278] text-lg mb-12 max-w-2xl mx-auto">
             Upload your image and let N3uralia do the work. Professional results in
             seconds.
           </p>
           <Link
             href="/studio"
             className="
-              inline-block px-8 py-4 rounded-lg bg-[#7FE7D8] text-[#050505] font-semibold
+              inline-block px-8 py-4 rounded-lg bg-[#d4a574] text-[#1a1410] font-semibold
               hover:bg-[#FFFFFF] transition-all transform hover:scale-105
               active:scale-95 shadow-lg hover:shadow-xl
             "
@@ -209,47 +209,47 @@ export default function Home() {
       </motion.section>
 
       {/* Footer */}
-      <footer className="border-t border-[#262626] bg-[#050505] py-12 px-6">
+      <footer className="border-t border-[#3a3530] bg-[#1a1410] py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
-              <h3 className="text-[#F5F5F2] font-semibold mb-4">Clar1ty</h3>
-              <p className="text-[#8A8A8A] text-sm">
+              <h3 className="text-[#e8e4dd] font-semibold mb-4">Clar1ty</h3>
+              <p className="text-[#8b8278] text-sm">
                 Professional image upscaling powered by N3uralia.
               </p>
             </div>
             <div>
-              <h4 className="text-[#F5F5F2] font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-[#8A8A8A] text-sm">
+              <h4 className="text-[#e8e4dd] font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-[#8b8278] text-sm">
                 <li>
-                  <Link href="/studio" className="hover:text-[#7FE7D8] transition-colors">
+                  <Link href="/studio" className="hover:text-[#d4a574] transition-colors">
                     Studio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/models" className="hover:text-[#7FE7D8] transition-colors">
+                  <Link href="/models" className="hover:text-[#d4a574] transition-colors">
                     Models
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="text-[#F5F5F2] font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-[#8A8A8A] text-sm">
+              <h4 className="text-[#e8e4dd] font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-[#8b8278] text-sm">
                 <li>
-                  <a href="#" className="hover:text-[#7FE7D8] transition-colors">
+                  <a href="#" className="hover:text-[#d4a574] transition-colors">
                     About
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-[#7FE7D8] transition-colors">
+                  <a href="#" className="hover:text-[#d4a574] transition-colors">
                     Contact
                   </a>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-[#262626] pt-8 text-center text-[#8A8A8A] text-sm">
+          <div className="border-t border-[#3a3530] pt-8 text-center text-[#8b8278] text-sm">
             <p>&copy; 2024 Clar1ty. All rights reserved. Powered by N3uralia.</p>
           </div>
         </div>

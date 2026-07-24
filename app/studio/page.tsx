@@ -106,31 +106,31 @@ export default function StudioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#F5F5F2]">
+    <div className="min-h-screen bg-[#1a1410] text-[#e8e4dd]">
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="border-b border-[#262626] bg-[#101010] sticky top-0 z-10"
+        className="border-b border-[#3a3530] bg-[#1f1a16] sticky top-0 z-10"
       >
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold text-[#FFFFFF]">Clar1ty</h1>
-              <p className="text-[#8A8A8A] text-sm mt-1">
+              <p className="text-[#8b8278] text-sm mt-1">
                 Professional image upscaling with N3uralia engine
               </p>
             </div>
             <nav className="flex gap-4">
               <a
                 href="/"
-                className="px-4 py-2 text-[#F5F5F2] hover:text-[#7FE7D8] transition-colors"
+                className="px-4 py-2 text-[#e8e4dd] hover:text-[#d4a574] transition-colors"
               >
                 Home
               </a>
               <a
                 href="/models"
-                className="px-4 py-2 text-[#F5F5F2] hover:text-[#7FE7D8] transition-colors"
+                className="px-4 py-2 text-[#e8e4dd] hover:text-[#d4a574] transition-colors"
               >
                 Models
               </a>
@@ -172,7 +172,7 @@ export default function StudioPage() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="w-full bg-[#101010] rounded-lg p-6 border border-[#262626]"
+                  className="w-full bg-[#1f1a16] rounded-lg p-6 border border-[#3a3530]"
                   style={{ aspectRatio: '16/9' }}
                 >
                   <div className="relative w-full h-full rounded-lg overflow-hidden">
@@ -183,8 +183,8 @@ export default function StudioPage() {
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 backdrop-blur-sm">
                       <div className="text-center">
-                        <div className="w-12 h-12 border-2 border-[#7FE7D8] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-[#F5F5F2]">Analyzing image...</p>
+                        <div className="w-12 h-12 border-2 border-[#d4a574] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                        <p className="text-[#e8e4dd]">Analyzing image...</p>
                       </div>
                     </div>
                   </div>
@@ -222,11 +222,11 @@ export default function StudioPage() {
               <motion.div
                 key={idx}
                 whileHover={{ scale: 1.05 }}
-                className="bg-[#101010] border border-[#262626] rounded-lg p-6 text-center"
+                className="bg-[#1f1a16] border border-[#3a3530] rounded-lg p-6 text-center"
               >
                 <div className="text-4xl mb-3">{feature.icon}</div>
-                <h3 className="text-[#F5F5F2] font-semibold mb-2">{feature.title}</h3>
-                <p className="text-[#8A8A8A] text-sm">{feature.description}</p>
+                <h3 className="text-[#e8e4dd] font-semibold mb-2">{feature.title}</h3>
+                <p className="text-[#8b8278] text-sm">{feature.description}</p>
               </motion.div>
             ))}
           </motion.section>

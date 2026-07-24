@@ -49,8 +49,8 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
         relative w-full h-96 rounded-xl border-2 border-dashed
         transition-all duration-300 cursor-pointer flex items-center justify-center
         ${isDragOver 
-          ? 'border-[#7FE7D8] bg-[#171717] scale-105' 
-          : 'border-[#262626] bg-[#101010] hover:border-[#5B8CFF]'
+          ? 'border-[#d4a574] bg-[#2d2620] scale-105' 
+          : 'border-[#3a3530] bg-[#1f1a16] hover:border-[#d4a574]'
         }
         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
       `}
@@ -68,7 +68,7 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
 
       <div className="text-center pointer-events-none">
         <svg
-          className="w-12 h-12 mx-auto mb-4 text-[#7FE7D8]"
+          className="w-12 h-12 mx-auto mb-4 text-[#d4a574]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -81,8 +81,8 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
           />
         </svg>
-        <p className="text-[#F5F5F2] text-lg font-medium mb-1">Drop Image Here</p>
-        <p className="text-[#8A8A8A] text-sm">
+        <p className="text-[#e8e4dd] text-lg font-medium mb-1">Drop Image Here</p>
+        <p className="text-[#8b8278] text-sm">
           or click to browse from your computer
         </p>
       </div>
@@ -91,7 +91,7 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-[#7FE7D8] opacity-5 rounded-xl pointer-events-none"
+          className="absolute inset-0 bg-[#d4a574] opacity-5 rounded-xl pointer-events-none"
         />
       )}
     </motion.div>

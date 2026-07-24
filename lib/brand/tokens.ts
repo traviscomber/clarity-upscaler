@@ -4,19 +4,23 @@
  */
 
 export const tokens = {
-  // Colors
+  // Colors - Clar1ty Brand (www.clar1ty.art)
   colors: {
-    background: '#050505',
-    foreground: '#F5F5F2',
-    surface: '#101010',
-    surfaceElevated: '#171717',
-    primary: '#FFFFFF',
+    background: '#1a1410',      // Deep brown-black
+    foreground: '#e8e4dd',      // Warm off-white
+    surface: '#1f1a16',         // Slightly lighter brown
+    surfaceElevated: '#2d2620', // Elevated surface
+    primary: '#ffffff',         // Pure white for contrast
     accent: {
-      neural: '#7FE7D8',
-      intelligence: '#5B8CFF',
+      gold: '#d4a574',          // Warm gold primary
+      goldLight: '#e8d9c7',     // Light gold for hover states
+      goldDark: '#c9a961',      // Dark gold for active states
     },
-    muted: '#8A8A8A',
-    border: '#262626',
+    muted: '#8b8278',           // Muted taupe
+    border: '#3a3530',          // Dark brown border
+    success: '#7cb342',         // Subtle success green
+    warning: '#ffd54f',         // Gold-aligned warning
+    error: '#ff6b6b',           // Soft red
   },
 
   // Typography
