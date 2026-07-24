@@ -47,19 +47,10 @@ const itemVariants = {
 };
 
 export default function ResultsPage() {
-  const [comparisonPosition, setComparisonPosition] = useState(50);
   const [activeMetric, setActiveMetric] = useState<'fidelity' | 'detail' | 'preservation'>('fidelity');
-  const [isDragging, setIsDragging] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState<'PNG' | 'TIFF' | 'WebP'>('PNG');
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const updatePosition = (clientX: number) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-    setComparisonPosition(pct);
-  };
+
 
   const handleDownload = (format: string) => {
     // Simulate download with canvas-based image export
@@ -150,55 +141,29 @@ export default function ResultsPage() {
               </button>
             </div>
 
-            <div
-              ref={containerRef}
-              className="relative w-full aspect-video bg-[#1f1a16] rounded-xl overflow-hidden border border-[#3a3530] cursor-col-resize select-none"
-              onMouseDown={(e) => { setIsDragging(true); updatePosition(e.clientX); }}
-              onMouseMove={(e) => { if (isDragging) updatePosition(e.clientX); }}
-              onMouseUp={() => setIsDragging(false)}
-              onMouseLeave={() => setIsDragging(false)}
-              onTouchStart={(e) => updatePosition(e.touches[0].clientX)}
-              onTouchMove={(e) => updatePosition(e.touches[0].clientX)}
-            >
-              {/* After/Enhanced (full width underneath) */}
-              <div className="absolute inset-0 w-full h-full">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Before/Original */}
+              <div className="relative rounded-xl overflow-hidden border border-[#3a3530] bg-[#1f1a16] aspect-square flex items-center justify-center">
                 <img
-                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='100%'%3E%3Cstop offset='0%' style='stop-color:%23d4a574;stop-opacity:1'/%3E%3Cstop offset='100%' style='stop-color:%232d2620;stop-opacity:1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='600' fill='url(%23g1)'/%3E%3Ctext x='50%' y='50%' font-size='32' font-weight='bold' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3EEnhanced Image%3C/text%3E%3Ctext x='50%' y='60%' font-size='14' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3E13580 × 13580px%3C/text%3E%3C/svg%3E"
-                  alt="Enhanced"
+                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%232d2620'/%3E%3Ctext x='50%' y='45%' font-size='20' font-weight='bold' fill='%238b8278' text-anchor='middle' dominant-baseline='central'%3EOriginal Image%3C/text%3E%3Ctext x='50%' y='55%' font-size='12' fill='%236b6258' text-anchor='middle' dominant-baseline='central'%3E1792 × 1024px%3C/text%3E%3C/svg%3E"
+                  alt="Before"
                   className="w-full h-full object-cover"
                 />
-              </div>
-
-              {/* Before/Original (clipped) */}
-              <div
-                className="absolute inset-0 overflow-hidden"
-                style={{ width: `${comparisonPosition}%` }}
-              >
-                <img
-                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='800' height='600' fill='%232d2620'/%3E%3Ctext x='50%' y='50%' font-size='32' font-weight='bold' fill='%238b8278' text-anchor='middle' dominant-baseline='central'%3EOriginal Image%3C/text%3E%3Ctext x='50%' y='60%' font-size='14' fill='%238b8278' text-anchor='middle' dominant-baseline='central'%3E1792 × 1024px%3C/text%3E%3C/svg%3E"
-                  alt="Original"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Divider */}
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-[#d4a574] pointer-events-none"
-                style={{ left: `${comparisonPosition}%` }}
-              >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#d4a574] flex items-center justify-center shadow-lg">
-                  <svg width="16" height="16" fill="none" stroke="#1a1410" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 4l-6 8 6 8M15 4l6 8-6 8" />
-                  </svg>
+                <div className="absolute top-4 left-4 px-3 py-1.5 bg-[#1a1410]/80 backdrop-blur-sm rounded-md text-xs text-[#e8e4dd] border border-[#3a3530] font-medium">
+                  Before
                 </div>
               </div>
 
-              {/* Labels */}
-              <div className="absolute top-4 left-4 px-3 py-1.5 bg-[#1a1410]/80 backdrop-blur-sm rounded-md text-xs text-[#e8e4dd] border border-[#3a3530] pointer-events-none font-medium">
-                Before
-              </div>
-              <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#d4a574]/20 backdrop-blur-sm rounded-md text-xs text-[#d4a574] border border-[#d4a574]/30 pointer-events-none font-medium">
-                After
+              {/* After/Enhanced */}
+              <div className="relative rounded-xl overflow-hidden border border-[#3a3530] bg-[#1f1a16] aspect-square flex items-center justify-center">
+                <img
+                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='100%'%3E%3Cstop offset='0%' style='stop-color:%23d4a574;stop-opacity:1'/%3E%3Cstop offset='100%' style='stop-color:%232d2620;stop-opacity:1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23g1)'/%3E%3Ctext x='50%' y='45%' font-size='20' font-weight='bold' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3EEnhanced Image%3C/text%3E%3Ctext x='50%' y='55%' font-size='12' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3E13580 × 13580px%3C/text%3E%3C/svg%3E"
+                  alt="After"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#d4a574]/20 backdrop-blur-sm rounded-md text-xs text-[#d4a574] border border-[#d4a574]/30 font-medium">
+                  After
+                </div>
               </div>
             </div>
           </motion.section>
