@@ -13,6 +13,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "autoprefixer": "latest",
     "framer-motion": "latest",
+    "lucide-react": "^1.26.0",
     "next": "latest",
     "postcss": "latest",
     "react": "latest",
