@@ -1,0 +1,9 @@
+{
+  "name": "face_restore",
+  "description": "Identity preserving portrait restoration",
+  "creativity": 0.10,
+  "resemblance": 1.2,
+  "preserve_identity": true,
+  "preserve_geometry": false,
+  "texture_recovery": 0.7
+}

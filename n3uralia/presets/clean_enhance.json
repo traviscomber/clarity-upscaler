@@ -1,0 +1,9 @@
+{
+  "name": "clean_enhance",
+  "description": "Natural enhancement preserving original image identity",
+  "creativity": 0.15,
+  "resemblance": 1.0,
+  "preserve_identity": true,
+  "preserve_geometry": true,
+  "texture_recovery": 0.8
+}
