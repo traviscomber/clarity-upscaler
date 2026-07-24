@@ -160,25 +160,25 @@ export default function ResultsPage() {
               onTouchStart={(e) => updatePosition(e.touches[0].clientX)}
               onTouchMove={(e) => updatePosition(e.touches[0].clientX)}
             >
-              {/* After (full width underneath) */}
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#d4a574]/5 to-[#2d2620]">
-                <div className="text-center space-y-2">
-                  <div className="w-14 h-14 mx-auto rounded-lg bg-[#d4a574]/20 border border-[#d4a574]/30" />
-                  <p className="text-xs text-[#d4a574]">Enhanced · 13580 × 13580px</p>
-                </div>
+              {/* After/Enhanced (full width underneath) */}
+              <div className="absolute inset-0 w-full h-full">
+                <img
+                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='100%'%3E%3Cstop offset='0%' style='stop-color:%23d4a574;stop-opacity:1'/%3E%3Cstop offset='100%' style='stop-color:%232d2620;stop-opacity:1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='600' fill='url(%23g1)'/%3E%3Ctext x='50%' y='50%' font-size='32' font-weight='bold' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3EEnhanced Image%3C/text%3E%3Ctext x='50%' y='60%' font-size='14' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3E13580 × 13580px%3C/text%3E%3C/svg%3E"
+                  alt="Enhanced"
+                  className="w-full h-full object-cover"
+                />
               </div>
 
-              {/* Before (clipped) */}
+              {/* Before/Original (clipped) */}
               <div
                 className="absolute inset-0 overflow-hidden"
                 style={{ width: `${comparisonPosition}%` }}
               >
-                <div className="absolute inset-0 w-screen flex items-center justify-center bg-[#2d2620]">
-                  <div className="text-center space-y-2">
-                    <div className="w-14 h-14 mx-auto rounded-lg bg-[#3a3530]" />
-                    <p className="text-xs text-[#8b8278]">Original · 3395 × 3395px</p>
-                  </div>
-                </div>
+                <img
+                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='800' height='600' fill='%232d2620'/%3E%3Ctext x='50%' y='50%' font-size='32' font-weight='bold' fill='%238b8278' text-anchor='middle' dominant-baseline='central'%3EOriginal Image%3C/text%3E%3Ctext x='50%' y='60%' font-size='14' fill='%238b8278' text-anchor='middle' dominant-baseline='central'%3E1792 × 1024px%3C/text%3E%3C/svg%3E"
+                  alt="Original"
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               {/* Divider */}
@@ -194,11 +194,11 @@ export default function ResultsPage() {
               </div>
 
               {/* Labels */}
-              <div className="absolute top-4 left-4 px-3 py-1.5 bg-[#1a1410]/80 backdrop-blur-sm rounded-md text-xs text-[#e8e4dd] border border-[#3a3530] pointer-events-none">
-                Original
+              <div className="absolute top-4 left-4 px-3 py-1.5 bg-[#1a1410]/80 backdrop-blur-sm rounded-md text-xs text-[#e8e4dd] border border-[#3a3530] pointer-events-none font-medium">
+                Before
               </div>
-              <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#d4a574]/20 backdrop-blur-sm rounded-md text-xs text-[#d4a574] border border-[#d4a574]/30 pointer-events-none">
-                Enhanced
+              <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#d4a574]/20 backdrop-blur-sm rounded-md text-xs text-[#d4a574] border border-[#d4a574]/30 pointer-events-none font-medium">
+                After
               </div>
             </div>
           </motion.section>
