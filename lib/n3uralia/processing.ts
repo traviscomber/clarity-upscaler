@@ -47,6 +47,31 @@ function getModelProfile(model: string): {
 }
 
 /**
+ * Build a sequence of intermediate sizes that step from the source up to the
+ * target in factors of at most 2x. The final entry is always exactly the
+ * target size. E.g. 4x -> [2x, 4x]; 8x -> [2x, 4x, 8x]; 1.5x -> [1.5x].
+ */
+function buildUpscaleSteps(
+  srcW: number,
+  srcH: number,
+  targetW: number,
+  targetH: number
+): Array<[number, number]> {
+  const steps: Array<[number, number]> = [];
+  let w = srcW;
+  let h = srcH;
+  // Double until the next double would overshoot the target.
+  while (w * 2 < targetW && h * 2 < targetH) {
+    w = Math.round(w * 2);
+    h = Math.round(h * 2);
+    steps.push([w, h]);
+  }
+  // Always finish exactly on the requested target dimensions.
+  steps.push([targetW, targetH]);
+  return steps;
+}
+
+/**
  * Apply N3uralia enhancement to an image buffer.
  * Performs real Lanczos upscaling + model-aware post-processing.
  */
@@ -80,25 +105,44 @@ export async function enhanceImage(
 
   const profile = getModelProfile(strategy.model);
 
-  // High-quality upscale using Lanczos3 resampling.
-  let processed = pipeline.resize(targetWidth, targetHeight, {
-    kernel: sharp.kernel.lanczos3,
-    fit: 'fill',
-  });
-
-  // Optional denoise for noisy / low-quality sources.
+  // Denoise noisy / low-quality sources BEFORE enlarging so we don't
+  // amplify grain, then keep working in high precision.
+  let processed = pipeline;
   if (profile.denoise) {
     processed = processed.median(3);
   }
 
-  // Detail recovery via unsharp masking. Heavier for "quality" target.
+  // Progressive multi-step upscaling. Enlarging in repeated ~2x Lanczos
+  // steps (rather than one large jump) yields cleaner edges and fewer
+  // ringing/aliasing artifacts on high scale factors. Resampling happens
+  // in linear light for gamma-correct results.
+  const steps = buildUpscaleSteps(srcWidth, srcHeight, targetWidth, targetHeight);
+  const speed = strategy.qualityTarget === 'speed';
+  for (let i = 0; i < steps.length; i++) {
+    const [w, h] = steps[i];
+    if (speed) {
+      // Single fast pass for the speed target.
+      processed = processed.resize(targetWidth, targetHeight, {
+        kernel: sharp.kernel.lanczos3,
+        fit: 'fill',
+      });
+      break;
+    }
+    processed = processed.resize(w, h, {
+      kernel: sharp.kernel.lanczos3,
+      fit: 'fill',
+    });
+  }
+
+  // Detail recovery via unsharp masking with flat/jagged thresholds so we
+  // sharpen real edges without boosting noise. Heavier for "quality" target.
   const sigma =
     strategy.qualityTarget === 'quality'
       ? profile.sharpenSigma * 1.2
-      : strategy.qualityTarget === 'speed'
+      : speed
         ? profile.sharpenSigma * 0.7
         : profile.sharpenSigma;
-  processed = processed.sharpen({ sigma });
+  processed = processed.sharpen({ sigma, m1: 0.5, m2: 2.5 });
 
   // Subtle color enrichment where the model calls for it.
   if (profile.saturation !== 1.0) {
