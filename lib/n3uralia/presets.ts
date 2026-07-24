@@ -94,6 +94,32 @@ export const PHILZ_PRESETS: Record<string, PhilzPreset> = {
     tile_overlap: 80,
     recommended_for: ['preview', 'test', 'speed'],
   },
+
+  vintage_restoration: {
+    id: 'vintage_restoration',
+    name: 'Vintage Restoration',
+    description: 'Specialized for sepia-toned and aged photographs. Preserves character while enhancing clarity.',
+    creativity: 0.12,
+    resemblance: 1.3,
+    denoise_steps: 20,
+    sharpen: 2.0,
+    dynamic: 5,
+    tile_overlap: 120,
+    recommended_for: ['vintage', 'sepia', 'aged', 'family_photo', 'old_photograph'],
+  },
+
+  landscape_enhancement: {
+    id: 'landscape_enhancement',
+    name: 'Landscape Enhancement',
+    description: 'Optimized for natural scenery with sky, mountains, and foliage. Brings out colors and textures.',
+    creativity: 0.30,
+    resemblance: 0.85,
+    denoise_steps: 19,
+    sharpen: 2.8,
+    dynamic: 10,
+    tile_overlap: 112,
+    recommended_for: ['landscape', 'nature', 'sky', 'scenery', 'outdoor'],
+  },
 };
 
 /**
