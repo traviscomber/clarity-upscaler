@@ -23,11 +23,11 @@ export async function POST(request: Request) {
     const processingTime = Date.now() - startTime;
 
     // Return as blob
-    return new Response(enhancedBuffer, {
+    return new Response(new Uint8Array(enhancedBuffer), {
       headers: {
         'Content-Type': 'image/jpeg',
-        'Content-Length': enhancedBuffer.length,
-        'X-Processing-Time': processingTime.toString(),
+        'Content-Length': String(enhancedBuffer.length),
+        'X-Processing-Time': String(processingTime),
       },
     });
   } catch (error) {
