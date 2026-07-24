@@ -154,11 +154,11 @@ export default function ResultsPage() {
                 </div>
               </div>
 
-              {/* After/Enhanced - Restored Version */}
+              {/* After/Enhanced - N3uralia Processed */}
               <div className="relative rounded-xl overflow-hidden border border-[#3a3530] bg-[#1f1a16] aspect-square flex items-center justify-center">
                 <img
-                  src="/restored-test.png"
-                  alt="After - Restored"
+                  src="/processed-result.png"
+                  alt="After - N3uralia Processed"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#d4a574]/20 backdrop-blur-sm rounded-md text-xs text-[#d4a574] border border-[#d4a574]/30 font-medium">
