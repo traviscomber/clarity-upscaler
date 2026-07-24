@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.3",
     "@tailwindcss/postcss": "^4.3.3",
     "autoprefixer": "latest",
     "framer-motion": "latest",
