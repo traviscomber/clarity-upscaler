@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "principles": {
+    "identity_preservation": true,
+    "geometry_preservation": true,
+    "texture_preservation": true,
+    "natural_color_preservation": true
+  },
+  "domains": {
+    "face": {
+      "enabled": true,
+      "future_model": "face_preservation_v1"
+    },
+    "architecture": {
+      "enabled": true,
+      "future_model": "architecture_preservation_v1"
+    },
+    "nature": {
+      "enabled": true,
+      "future_model": "nature_texture_preservation_v1"
+    }
+  }
+}
