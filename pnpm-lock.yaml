@@ -11,6 +11,9 @@ importers:
       '@supabase/ssr':
         specifier: ^0.12.3
         version: 0.12.3(@supabase/supabase-js@2.110.8)
+      '@supabase/supabase-js':
+        specifier: ^2.110.8
+        version: 2.110.8
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
