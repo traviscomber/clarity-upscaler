@@ -1,12 +1,9 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install",
   "env": {
-    "NEXT_PUBLIC_APP_NAME": {
-      "description": "Application name displayed in the UI",
-      "value": "Clar1ty Studio"
-    }
+    "NEXT_PUBLIC_APP_NAME": "Clar1ty Studio"
   },
   "regions": ["iad1"],
   "functions": {
