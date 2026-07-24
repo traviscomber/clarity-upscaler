@@ -1,0 +1,9 @@
+{
+  "name": "nature_restore",
+  "description": "Natural texture recovery with controlled creativity",
+  "creativity": 0.25,
+  "resemblance": 0.9,
+  "preserve_identity": false,
+  "preserve_geometry": true,
+  "texture_recovery": 1.0
+}
