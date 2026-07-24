@@ -238,6 +238,8 @@ export default function StudioPage() {
                     onEnhance={handleEnhance}
                     isProcessing={isEnhancing}
                     detectedContent={analysis?.detectedContent}
+                    recommendedPresetId={analysis?.recommendedPresetId}
+                    recommendedPresetReason={analysis?.recommendedPresetReason}
                   />
                 ) : (
                   <div className="bg-[#1f1a16] border border-[#3a3530] rounded-lg p-6">

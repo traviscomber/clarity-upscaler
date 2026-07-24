@@ -13,6 +13,8 @@ interface EnhancementPanelProps {
   onEnhance: () => void;
   isProcessing?: boolean;
   detectedContent?: string[];
+  recommendedPresetId?: string;
+  recommendedPresetReason?: string;
 }
 
 export default function EnhancementPanel({
@@ -22,6 +24,8 @@ export default function EnhancementPanel({
   onEnhance,
   isProcessing,
   detectedContent = [],
+  recommendedPresetId,
+  recommendedPresetReason,
 }: EnhancementPanelProps) {
   const [showPresets, setShowPresets] = useState(false);
   const scaleOptions = [2, 4, 8];
@@ -29,6 +33,9 @@ export default function EnhancementPanel({
   const currentPreset = strategy.presetId
     ? getPreset(strategy.presetId)
     : getPreset('full_spectrum');
+  
+  const recommendedPreset = recommendedPresetId ? getPreset(recommendedPresetId) : null;
+  const isUsingRecommended = strategy.presetId === recommendedPresetId;
 
   const handlePresetSelect = (presetId: string) => {
     onPresetChange?.(presetId);
@@ -43,6 +50,38 @@ export default function EnhancementPanel({
       className="w-full bg-[#1f1a16] rounded-lg p-6 border border-[#3a3530]"
     >
       <h2 className="text-[#e8e4dd] font-semibold text-lg mb-6">Enhancement</h2>
+
+      {/* Recommendation Banner */}
+      {recommendedPreset && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-6 p-4 rounded-lg border-2 transition-all ${
+            isUsingRecommended
+              ? 'bg-[#d4a574]/10 border-[#d4a574]'
+              : 'bg-[#2d2620] border-[#3a3530] hover:border-[#d4a574]'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-[#d4a574] font-semibold text-sm">Recommended</p>
+              <p className="text-[#e8e4dd] font-medium text-sm mt-1">{recommendedPreset.name}</p>
+              <p className="text-[#8b8278] text-xs mt-2">{recommendedPresetReason}</p>
+            </div>
+            {!isUsingRecommended && recommendedPresetId && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onPresetChange?.(recommendedPresetId)}
+                disabled={isProcessing}
+                className="px-3 py-1.5 text-xs font-medium bg-[#d4a574] text-[#1a1410] rounded-md hover:bg-[#e8c3a1] transition-colors whitespace-nowrap"
+              >
+                Use This
+              </motion.button>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Scale Factor Selection */}
       <div className="mb-6">
