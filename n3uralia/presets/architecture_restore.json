@@ -1,0 +1,9 @@
+{
+  "name": "architecture_restore",
+  "description": "Geometry preserving architectural enhancement",
+  "creativity": 0.20,
+  "resemblance": 0.95,
+  "preserve_identity": false,
+  "preserve_geometry": true,
+  "texture_recovery": 0.9
+}
