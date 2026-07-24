@@ -1,0 +1,12 @@
+{
+  "name": "huilo_huilo",
+  "category": "architecture_nature",
+  "description": "Premium forest hospitality enhancement",
+  "fidelity": 0.9,
+  "creativity": 0.25,
+  "preserve_geometry": true,
+  "future_loras": [
+    "n3uralia_architecture_v1",
+    "n3uralia_forest_v1"
+  ]
+}
