@@ -157,7 +157,7 @@ export default function ResultsPage() {
               {/* After/Enhanced - Restored Version */}
               <div className="relative rounded-xl overflow-hidden border border-[#3a3530] bg-[#1f1a16] aspect-square flex items-center justify-center">
                 <img
-                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='g2' x1='0%' y1='0%' x2='100%' y2='100%'%3E%3Cstop offset='0%' style='stop-color:%23d4a574;stop-opacity:0.9'/%3E%3Cstop offset='50%' style='stop-color:%238b6f47;stop-opacity:0.8'/%3E%3Cstop offset='100%' style='stop-color:%232d2620;stop-opacity:1'/%3E%3C/linearGradient%3E%3Cfilter id='blur'%3E%3CfeGaussianBlur in='SourceGraphic' stdDeviation='0.5'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23g2)'/%3E%3Ctext x='50%' y='40%' font-size='18' font-weight='bold' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3ERestored%3C/text%3E%3Ctext x='50%' y='55%' font-size='14' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3E4x Upscaled%3C/text%3E%3Ctext x='50%' y='70%' font-size='11' fill='%231a1410' text-anchor='middle' dominant-baseline='central'%3E13580 × 13580px%3C/text%3E%3C/svg%3E"
+                  src="/restored-test.png"
                   alt="After - Restored"
                   className="w-full h-full object-cover"
                 />
