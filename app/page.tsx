@@ -113,14 +113,14 @@ export default function Home() {
             <div className="relative aspect-[4/5] max-w-md mx-auto rounded-2xl overflow-hidden border border-[#3a3530] shadow-2xl shadow-black/50">
               {/* Sharp (after) */}
               <img
-                src="/showcase/cosmic-detail.png"
-                alt="Intricate cosmic scene enhanced with Clar1ty showing crisp detail across thousands of luminous particles"
+                src="/showcase/hero-detail.png"
+                alt="Golden eagle enhanced with Clar1ty showing razor-sharp feather detail"
                 className="absolute inset-0 w-full h-full object-cover"
               />
               {/* Blurred (before) clipped to left half */}
               <div className="absolute inset-0" style={{ clipPath: 'inset(0 50% 0 0)' }}>
                 <img
-                  src="/showcase/cosmic-detail.png"
+                  src="/showcase/hero-detail.png"
                   alt=""
                   aria-hidden="true"
                   className="absolute inset-0 w-full h-full object-cover"
