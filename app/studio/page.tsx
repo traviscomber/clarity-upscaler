@@ -8,6 +8,7 @@ import ImageAnalysisPanel from '@/components/image-analysis';
 import EnhancementPanel from '@/components/enhancement-panel';
 import BeforeAfter from '@/components/before-after';
 import { selectStrategy } from '@/lib/n3uralia/strategy';
+import { getPreset } from '@/lib/n3uralia/presets';
 import type { ImageAnalysis, EnhancementStrategy } from '@/lib/n3uralia/engine';
 
 type StudioState = 'idle' | 'analyzing' | 'ready' | 'enhancing' | 'done' | 'error';
@@ -72,8 +73,33 @@ export default function StudioPage() {
           selectStrategy(analysis, {
             scaleFactor: scale,
             qualityTarget: strategy.qualityTarget,
+            presetId: strategy.presetId,
           })
         );
+      }
+    },
+    [strategy, analysis]
+  );
+
+  const handlePresetChange = useCallback(
+    (presetId: string) => {
+      if (strategy && analysis) {
+        const preset = getPreset(presetId);
+        const updatedStrategy = selectStrategy(analysis, {
+          scaleFactor: strategy.scaleFactor,
+          qualityTarget: strategy.qualityTarget,
+          presetId,
+        });
+        setStrategy({
+          ...updatedStrategy,
+          presetId,
+          creativity: preset.creativity,
+          resemblance: preset.resemblance,
+          denoise_steps: preset.denoise_steps,
+          sharpen: preset.sharpen,
+          dynamic: preset.dynamic,
+          tile_overlap: preset.tile_overlap,
+        });
       }
     },
     [strategy, analysis]
@@ -208,8 +234,10 @@ export default function StudioPage() {
                   <EnhancementPanel
                     strategy={strategy}
                     onScaleChange={handleScaleChange}
+                    onPresetChange={handlePresetChange}
                     onEnhance={handleEnhance}
                     isProcessing={isEnhancing}
+                    detectedContent={analysis?.detectedContent}
                   />
                 ) : (
                   <div className="bg-[#1f1a16] border border-[#3a3530] rounded-lg p-6">

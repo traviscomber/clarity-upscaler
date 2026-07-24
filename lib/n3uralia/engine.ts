@@ -22,6 +22,14 @@ export interface EnhancementStrategy {
   scaleFactor: number;
   preservationLevel: number;
   qualityTarget: 'speed' | 'balanced' | 'quality';
+  // Philz preset parameters (optional, for future GPU integration or reference)
+  presetId?: string;
+  creativity?: number;
+  resemblance?: number;
+  denoise_steps?: number;
+  sharpen?: number;
+  dynamic?: number;
+  tile_overlap?: number;
 }
 
 export interface EnhancementResult {

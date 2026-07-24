@@ -9,10 +9,12 @@ export function selectStrategy(
   options?: {
     scaleFactor?: number;
     qualityTarget?: 'speed' | 'balanced' | 'quality';
+    presetId?: string;
   }
 ): EnhancementStrategy {
   const scaleFactor = options?.scaleFactor || getDefaultScaleFactor(analysis);
   const qualityTarget = options?.qualityTarget || 'balanced';
+  const presetId = options?.presetId || getDefaultPresetId(analysis.detectedContent);
 
   // Select model based on detected content
   const model = selectModel(analysis.detectedContent);
@@ -26,6 +28,7 @@ export function selectStrategy(
     scaleFactor,
     preservationLevel,
     qualityTarget,
+    presetId,
   };
 }
 
@@ -75,4 +78,18 @@ function getPreservationLevel(quality: 'low' | 'medium' | 'high' | 'ultra'): num
 
 function getStrategyName(model: string, scaleFactor: number): string {
   return `${model} - ${scaleFactor}x Upscale`;
+}
+
+function getDefaultPresetId(detectedContent: string[]): string {
+  // Map detected content to appropriate Philz preset
+  if (detectedContent.some(c => c === 'Face' || c === 'Portrait')) {
+    return 'portrait';
+  }
+  if (detectedContent.some(c => c === 'Architecture' || c === 'Interior')) {
+    return 'architecture';
+  }
+  if (detectedContent.some(c => c === 'Nature' || c === 'Landscape')) {
+    return 'nature';
+  }
+  return 'full_spectrum';
 }
