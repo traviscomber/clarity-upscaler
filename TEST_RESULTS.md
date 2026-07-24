@@ -38,10 +38,10 @@
 ✓ **Protection Active**:
 - `/studio` requires login (redirects to `/auth/login`)
 - Demo users created and verified:
-  - admin@clar1ty.art / c4rlit0s
-  - travis@clar1ty.art / c4rlit0s
-  - test@clar1ty.art / c4rlit0s
-  - demo@clar1ty.art / c4rlit0s
+  - admin@clar1ty.art / demo1234
+  - travis@clar1ty.art / demo1234
+  - test@clar1ty.art / demo1234
+  - demo@clar1ty.art / demo1234
 
 ### Capabilities Demonstrated
 
