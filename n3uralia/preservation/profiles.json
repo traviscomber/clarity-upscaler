@@ -1,0 +1,22 @@
+{
+  "clean_enhance": {
+    "preserve_identity": 0.95,
+    "preserve_geometry": 0.95,
+    "creativity_limit": 0.15
+  },
+  "face_restore": {
+    "preserve_identity": 1.0,
+    "preserve_geometry": 0.95,
+    "creativity_limit": 0.10
+  },
+  "architecture_restore": {
+    "preserve_identity": 0.0,
+    "preserve_geometry": 1.0,
+    "creativity_limit": 0.20
+  },
+  "nature_restore": {
+    "preserve_identity": 0.0,
+    "preserve_geometry": 0.85,
+    "creativity_limit": 0.30
+  }
+}
