@@ -3,6 +3,7 @@
  */
 
 import sharp from 'sharp';
+import { recommendPreset } from './presets';
 import type { ImageAnalysis } from './engine';
 
 export async function analyzeImage(imageBuffer: Buffer): Promise<ImageAnalysis> {
@@ -28,6 +29,9 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<ImageAnalysis> 
   const detectedContent = getDetectedContent();
   const recommendations = getRecommendations(quality, detectedContent);
 
+  // Get smart preset recommendation based on image analysis
+  const recommendation = recommendPreset(megapixels, quality, detectedContent, 4);
+
   const resolution = hasDimensions
     ? `${width} × ${height}px`
     : `~${Math.round(Math.sqrt((megapixels * 1_000_000) / 4))}px`;
@@ -39,6 +43,8 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<ImageAnalysis> 
     confidence: Math.round(confidence * 100) / 100,
     detectedContent,
     recommendations,
+    recommendedPresetId: recommendation.preset.id,
+    recommendedPresetReason: recommendation.reason,
   };
 }
 

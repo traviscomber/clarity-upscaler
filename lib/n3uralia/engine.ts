@@ -14,6 +14,8 @@ export interface ImageAnalysis {
   confidence: number;
   detectedContent: string[];
   recommendations: string[];
+  recommendedPresetId?: string;
+  recommendedPresetReason?: string;
 }
 
 export interface EnhancementStrategy {

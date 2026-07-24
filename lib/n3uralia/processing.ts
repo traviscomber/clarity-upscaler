@@ -19,31 +19,40 @@ export interface EnhanceOutput {
 const MAX_OUTPUT_PIXELS = 40_000_000; // 40 MP ceiling
 
 /**
- * Model-specific tuning. Each N3uralia model maps to a distinct
- * sharpening/denoise profile applied after upscaling.
+ * Interpret Philz parameters to sharp operations.
+ * Converts creativity/resemblance/denoise_steps/sharpen into local sharp tuning.
  */
-function getModelProfile(model: string): {
+function getPhilzProfile(strategy: EnhancementStrategy): {
   sharpenSigma: number;
   denoise: boolean;
+  denoiseRadius: number;
   saturation: number;
 } {
-  switch (model) {
-    case 'Face Restoration':
-      // Gentle on skin, light denoise, neutral color.
-      return { sharpenSigma: 0.6, denoise: true, saturation: 1.0 };
-    case 'Nature Enhanced':
-      // Punchy detail and slightly richer color for foliage/landscapes.
-      return { sharpenSigma: 1.1, denoise: false, saturation: 1.08 };
-    case 'Architecture v1':
-      // Crisp edges for lines and structure, no color shift.
-      return { sharpenSigma: 1.3, denoise: false, saturation: 1.0 };
-    case 'Clean Detail':
-      // Balanced sharpening with denoise for noisy sources.
-      return { sharpenSigma: 0.9, denoise: true, saturation: 1.02 };
-    default:
-      // Full Spectrum / fallback.
-      return { sharpenSigma: 1.0, denoise: false, saturation: 1.03 };
-  }
+  // Philz parameters with fallbacks
+  const creativity = strategy.creativity ?? 0.35;
+  const resemblance = strategy.resemblance ?? 0.6;
+  const denoise_steps = strategy.denoise_steps ?? 18;
+  const sharpen = strategy.sharpen ?? 2.0;
+
+  // creativity (0.1–0.9) → sharpen intensity: low creativity = gentle, high = aggressive
+  const sharpenSigma = 0.4 + creativity * 1.2;
+
+  // denoise_steps (8–28) → aggressiveness of denoise: higher steps = more aggressive
+  const denoise = denoise_steps > 12;
+  const denoiseRadius = Math.min(5, Math.ceil(denoise_steps / 6));
+
+  // resemblance (0.3–1.6) → saturation: low resemblance = more saturated/artistic
+  const saturation = 0.95 + resemblance * 0.05;
+
+  // sharpen (0–10) parameter is already in sharp units, just apply directly
+  // (handled in main enhance logic)
+
+  return {
+    sharpenSigma,
+    denoise,
+    denoiseRadius,
+    saturation,
+  };
 }
 
 /**
@@ -103,13 +112,13 @@ export async function enhanceImage(
     targetHeight = Math.round(targetHeight * ratio);
   }
 
-  const profile = getModelProfile(strategy.model);
+  const profile = getPhilzProfile(strategy);
 
   // Denoise noisy / low-quality sources BEFORE enlarging so we don't
-  // amplify grain, then keep working in high precision.
+  // amplify grain. Use median radius based on Philz denoise_steps parameter.
   let processed = pipeline;
   if (profile.denoise) {
-    processed = processed.median(3);
+    processed = processed.median(profile.denoiseRadius);
   }
 
   // Progressive multi-step upscaling. Enlarging in repeated ~2x Lanczos
@@ -134,15 +143,19 @@ export async function enhanceImage(
     });
   }
 
-  // Detail recovery via unsharp masking with flat/jagged thresholds so we
-  // sharpen real edges without boosting noise. Heavier for "quality" target.
-  const sigma =
-    strategy.qualityTarget === 'quality'
-      ? profile.sharpenSigma * 1.2
-      : speed
-        ? profile.sharpenSigma * 0.7
-        : profile.sharpenSigma;
-  processed = processed.sharpen({ sigma, m1: 0.5, m2: 2.5 });
+  // Detail recovery via unsharp masking. Sigma calculated from Philz creativity
+  // parameter, adjusted for quality target. Sharpen parameter from preset scales intensity.
+  let sigma = profile.sharpenSigma;
+  if (strategy.qualityTarget === 'quality') {
+    sigma *= 1.2;
+  } else if (speed) {
+    sigma *= 0.7;
+  }
+
+  // Apply sharpen parameter (0–10) from Philz preset to scale the effect
+  const sharpen = strategy.sharpen ?? 2.0;
+  const finalSharpenSigma = sigma * (sharpen / 2.5);
+  processed = processed.sharpen({ sigma: finalSharpenSigma, m1: 0.5, m2: 2.5 });
 
   // Subtle color enrichment where the model calls for it.
   if (profile.saturation !== 1.0) {
