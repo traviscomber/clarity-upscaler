@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install",
+  "env": {
+    "NEXT_PUBLIC_APP_NAME": "Clar1ty Studio"
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
+}

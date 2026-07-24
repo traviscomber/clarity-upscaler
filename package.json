@@ -1,11 +1,32 @@
 {
-  "name": "stable-diffusion-webui",
-  "version": "0.0.0",
-  "devDependencies": {
-    "eslint": "^8.40.0"
-  },
+  "name": "clar1ty-studio",
+  "version": "1.0.0",
+  "description": "Clar1ty Studio - Professional image upscaling with N3uralia engine",
+  "private": true,
   "scripts": {
-    "lint": "eslint .",
-    "fix": "eslint --fix ."
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.3",
+    "@supabase/supabase-js": "^2.110.8",
+    "@tailwindcss/postcss": "^4.3.3",
+    "autoprefixer": "latest",
+    "framer-motion": "latest",
+    "lucide-react": "^1.26.0",
+    "next": "latest",
+    "postcss": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "sharp": "^0.35.3",
+    "tailwindcss": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "^5.9.3"
   }
 }

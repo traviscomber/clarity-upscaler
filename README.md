@@ -1,95 +1,184 @@
-<div align="center">
+# Clar1ty Studio - Professional Image Upscaling
 
-<h1> Clarity AI | AI Image Upscaler & Enhancer - free and open-source Magnific Alternative </h1>
+Modern web application for professional image upscaling powered by the N3uralia engine. Built with Next.js 16, React 19, and Tailwind CSS v4.
 
-[![App](https://img.shields.io/badge/App-ClarityAI.co-blueviolet)](https://ClarityAI.co)
+[![App](https://img.shields.io/badge/App-Clar1ty-blueviolet)](http://localhost:3000)
+[![Framework](https://img.shields.io/badge/Framework-Next.js%2016-black)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19-blue)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://typescriptlang.org)
 
-[![API](https://img.shields.io/badge/API-ClarityAI.co/api-green)](https://ClarityAI.co/api)
+## 🎯 Overview
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/philz1337x?style=social)](https://twitter.com/philz1337x)
-![GitHub stars](https://img.shields.io/github/stars/philz1337x/clarity-upscaler?style=social&label=Star)
+Clar1ty Studio is a professional-grade image upscaling platform that combines intelligent AI analysis with accessible web design. The application automatically detects image content, recommends optimal enhancement strategies, and provides real-time quality metrics throughout the enhancement process.
 
-![Example video](example.gif)
+### Core Philosophy
+- **No Visual Noise** - Clean interface focused on your images
+- **Image is Hero** - UI supports, never competes
+- **Explainable AI** - Transparent decision-making with detailed metrics
+- **Preserve Original** - Enhancement without destruction
+- **Professional Workflow** - Built for creative professionals
 
-[Full Video on X/Twitter](https://x.com/philz1337x/status/1768679154726359128?s=20)
+## 📦 What's Included
 
-</div>
+- **Next.js 16 App Router** - Modern React server-side rendering
+- **Design System** - Custom Clar1ty brand tokens and colors
+- **N3uralia Engine** - AI-powered image analysis and enhancement
+- **Responsive UI** - Mobile-first design with Tailwind CSS v4
+- **Animations** - Smooth interactions with Framer Motion
+- **API Routes** - Server-side image processing endpoints
+- **TypeScript** - Full type safety across the stack
 
-# 👋 Hello
+## 🚀 Quick Start
 
-I build open source AI apps. To finance my work i also build paid versions of my code. But feel free to use the free code. I post features and new projects on https://twitter.com/philz1337x
+### Prerequisites
+- Node.js 18+ 
+- pnpm (recommended) or npm
 
-# 🗞️ Updates
+### Installation
 
-- 03/05/2025: Flux upscaling only via my app and api: (http://clarityai.co/flux-upscaler)
-- 06/19/2024: Pattern upscaling
-- 05/24/2024: Increased Resolution to 13kx13k (https://x.com/philz1337x/status/1793983581636690379)
-- 05/16/2024: Output file format: jpg/png/webp (https://x.com/philz1337x/status/1791431093641457824)
-- 05/02/2024: Sharpen image
-- 05/07/2024: ComfyUI node (https://x.com/philz1337x/status/1787905308439826920)
-- 04/12/2024: Multi-step upscaling (https://x.com/philz1337x/status/1785269458304442565)
-- 04/07/2024: Resemblance fixed (https://x.com/levelsio/status/1776729356120797265)
-- 04/05/2024: Speed Improvements (https://x.com/philz1337x/status/1776121175195975888)
-- 04/01/2024: Support custom safetensors checkpoints (https://x.com/philz1337x/status/1774772572632338435)
-- 03/28/2024: Anime upscaling (https://x.com/philz1337x/status/1773342568543346738) (https://clarityai.co/anime-image-upscaling)
-- 03/26/2024: LoRa Support (https://x.com/philz1337x/status/1772575319871959180)
-- 03/21/2024: Pre downscaling (https://x.com/philz1337x/status/1770680096031961351)
-- 03/18/2024: Fractality (https://x.com/philz1337x/status/1769756654533485050)
-- 03/15/2024: Code release (https://x.com/philz1337x/status/1768679154726359128)
+```bash
+# Install dependencies
+pnpm install
 
-# 🔎 Upscaling with Flux
+# Start development server
+pnpm dev
 
-Flux Upscaling is now available at [ClarityAI.co/flux-upscaler](http://clarityai.co/flux-upscaler) and is not open-source
-
-- It supports Flux LoRas with a style or a face
-- It's very good at faces, text, art, and generating error-free images
-
-# 🚀 Options to use Clarity-Upscaler
-
-Note that this repository is an implementation for cog. If you are not familiar with cog, I recommend the easier solutions. The free options are ComfyUI and A1111, while the paid but easy-to-use options are my app ClarityAI.co and the ComfyUI API Node.
-
-## 🧑‍💻 App
-
-The simplest option to use Clarity is with the app at [ClarityAI.co](https://ClarityAI.co)
-
-## ⚙️ API
-
-To integrate Clarity Upscaler with an API into your application use: [ClarityAI.co/API](https://ClarityAI.co/api)
-
-## 🐰 ComfyUI
-
-### 1. API node
-
-1. Open ComfyUI Manager, search for Clarity AI, and install the node.
-2. Create an API key at: [ClarityAI.co/ComfyUI](https://ClarityAI.co/comfyui)
-3. Add the API key to the node as a) envirement variable `CAI_API_KEY` OR b) to a `cai_platform_key.txt` text file OR c) in `api_key_override` field of the node.
-
-Full instructions: https://github.com/philz1337x/ComfyUI-ClarityAI
-
-### 2. Free workflow
-
-1. Download the repo https://github.com/philz1337x/ComfyUI-ClarityAI and use the file free-wokflow.json
-
-## 🕵️‍♂️ Cog
-
-If you are not familiar with cog read: <a href=https://github.com/replicate/cog/blob/main/docs/getting-started-own-model.md>cog docs</a>
-
-- run `download_weights.py`
-
-- predict with cog:
-
-```su
-cog predict -i image="link-to-image"
+# Open http://localhost:3000 in your browser
 ```
 
-## 🤹‍♂️ A1111 webUI
+### Production Build
 
-For a detailed explanation, use the tutorial in this post: https://x.com/philz1337x/status/1830504764389380466
+```bash
+# Build optimized version
+pnpm build
 
-https://github.com/AUTOMATIC1111/stable-diffusion-webui
-
-- Use these params:
-
-```Prompt:
-masterpiece, best quality, highres, <lora:more_details:0.5> <lora:SDXLrender_v2.0:1> Negative prompt: (worst quality, low quality, normal quality:2) JuggernautNegative-neg Steps: 18, Sampler: DPM++ 3M SDE Karras, CFG scale: 6.0, Seed: 1337, Size: 1024x1024, Model hash: 338b85bc4f, Model: juggernaut_reborn, Denoising strength: 0.35, Tiled Diffusion upscaler: 4x-UltraSharp, Tiled Diffusion scale factor: 2, Tiled Diffusion: {"Method": "MultiDiffusion", "Tile tile width": 112, "Tile tile height": 144, "Tile Overlap": 4, "Tile batch size": 8, "Upscaler": "4x-UltraSharp", "Upscale factor": 2, "Keep input size": true}, ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile, Weight: 0.6, Resize Mode: 1, Low Vram: False, Processor Res: 512, Threshold A: 1, Threshold B: 1, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: 1, Hr Option: HiResFixOption.BOTH, Save Detected Map: False", Lora hashes: "more_details: 3b8aa1d351ef, SDXLrender_v2.0: 3925cf4759af"
+# Start production server
+pnpm start
 ```
+
+## 📁 Project Structure
+
+```
+app/
+├── page.tsx                 # Landing page
+├── layout.tsx              # Root layout
+├── globals.css             # Global styles & design tokens
+├── studio/
+│   └── page.tsx            # Main upscaling interface
+├── models/
+│   └── page.tsx            # Models showcase
+└── api/
+    ├── analyze/route.ts    # Image analysis
+    └── enhance/route.ts    # Image enhancement
+
+components/
+├── upload-zone.tsx         # File upload
+├── image-analysis.tsx      # Analysis display
+├── enhancement-panel.tsx   # Controls
+└── before-after.tsx        # Comparison slider
+
+lib/
+├── brand/
+│   ├── tokens.ts          # Design system
+│   └── principles.ts      # UI principles
+└── n3uralia/
+    ├── engine.ts          # Main engine
+    ├── analyzer.ts        # Image analysis
+    ├── strategy.ts        # Strategy selection
+    └── processing.ts      # Enhancement pipeline
+```
+
+## 🎨 Design System
+
+### Color Palette
+- **Background**: `#050505` - Deep black
+- **Foreground**: `#F5F5F2` - Warm white
+- **Surface**: `#101010` - Dark surfaces
+- **Accent Neural**: `#7FE7D8` - Cyan accent
+- **Accent Intelligence**: `#5B8CFF` - Blue accent
+
+### Typography
+- **Display**: Inter Tight (600 weight)
+- **Body**: Inter (400 weight)  
+- **Technical**: JetBrains Mono (400 weight)
+
+## 🧠 N3uralia Engine
+
+The engine includes:
+
+1. **Image Analyzer** - Detects content, quality, and recommendations
+2. **Strategy Selector** - Chooses optimal upscaling approach
+3. **Processing Pipeline** - Executes enhancement operations
+4. **Quality Evaluator** - Calculates preservation metrics
+
+### Available Models
+- **Architecture v1** - Buildings and structures
+- **Nature Enhanced** - Landscapes and wildlife
+- **Face Restoration** - Portraits and facial details
+- **Clean Detail** - Fast general-purpose
+- **Full Spectrum** - Universal content handler
+
+## 🔌 API Endpoints
+
+### POST /api/analyze
+Analyzes image and returns metadata.
+
+```bash
+curl -X POST http://localhost:3000/api/analyze \
+  -F "image=@photo.jpg"
+```
+
+### POST /api/enhance
+Enhances image with selected strategy.
+
+```bash
+curl -X POST http://localhost:3000/api/enhance \
+  -F "image=@photo.jpg" \
+  -F 'strategy={"scaleFactor":2,"model":"Architecture v1"}'
+```
+
+## 🌐 Pages
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Landing page with hero & features |
+| `/studio` | Main upscaling interface |
+| `/models` | Model showcase & documentation |
+
+## 📊 Features
+
+- ✅ Drag-and-drop image upload
+- ✅ Automatic content analysis
+- ✅ Multiple upscaling models
+- ✅ Interactive before/after slider
+- ✅ Real-time quality metrics
+- ✅ Scale factor selection (2x, 4x, 8x)
+- ✅ Quality targets (speed, balanced, quality)
+- ✅ Responsive design
+- ✅ Smooth animations
+
+## 🚀 Deployment
+
+Deploy to Vercel with one click:
+
+```bash
+vercel deploy
+```
+
+Environment variables:
+- `NEXT_PUBLIC_APP_NAME` - App name in UI (optional)
+
+## 🔧 Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Framework | Next.js 16 |
+| React | 19.2.8 |
+| Styling | Tailwind CSS v4 |
+| Animations | Framer Motion |
+| Language | TypeScript 5 |
+| Build | Turbopack |
+
+## 📄 License
+
+Copyright 2024 Clar1ty Studio. All rights reserved.
