@@ -1,5 +1,6 @@
-import { enhanceImage, getQualityMetrics, validateStrategy } from '@/lib/n3uralia/processing';
 import type { EnhancementStrategy } from '@/lib/n3uralia/engine';
+import { getQualityMetrics, validateStrategy } from '@/lib/n3uralia/processing';
+import { enhanceWithProvider } from '@/lib/n3uralia/router';
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +27,6 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Validate image size (max 50MB)
     if (buffer.length > 50 * 1024 * 1024) {
       return Response.json(
         { error: 'Image too large (max 50MB)' },
@@ -34,7 +34,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate strategy
     const validation = validateStrategy(buffer, strategy);
     if (!validation.valid) {
       return Response.json(
@@ -43,15 +42,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Process image through the real N3uralia engine
     const startTime = Date.now();
-    const enhanced = await enhanceImage(buffer, strategy);
+    const enhanced = await enhanceWithProvider(buffer, strategy);
     const processingTime = Date.now() - startTime;
-
-    // Calculate quality metrics
     const metrics = getQualityMetrics(strategy);
 
-    // Return response with metadata
     const responseHeaders = {
       'Content-Type': enhanced.contentType,
       'Content-Length': String(enhanced.buffer.length),
@@ -65,6 +60,11 @@ export async function POST(request: Request) {
       'X-Fidelity': String(Math.round(metrics.fidelity * 100)),
       'X-Detail': String(Math.round(metrics.detail * 100)),
       'X-Preservation': String(Math.round(metrics.preservation * 100)),
+      'X-Provider': enhanced.provider,
+      'X-Execution-Mode': enhanced.executionMode,
+      'X-Provider-Requested': enhanced.selection.requested,
+      'X-Provider-Fallback': String(enhanced.selection.fallback),
+      'X-Provider-Reason': enhanced.selection.reason,
     };
 
     return new Response(new Uint8Array(enhanced.buffer), {
