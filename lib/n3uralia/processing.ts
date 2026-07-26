@@ -15,97 +15,68 @@ export interface EnhanceOutput {
   contentType: string;
 }
 
-// Cap the output so extreme scale factors can't exhaust memory.
-const MAX_OUTPUT_PIXELS = 40_000_000; // 40 MP ceiling
+// Cap the output so extreme scale factors cannot exhaust memory.
+const MAX_OUTPUT_PIXELS = 40_000_000;
 
-/**
- * Interpret Philz parameters to sharp operations.
- * Converts creativity/resemblance/denoise_steps/sharpen into local sharp tuning.
- */
 function getPhilzProfile(strategy: EnhancementStrategy): {
   sharpenSigma: number;
   denoise: boolean;
   denoiseRadius: number;
   saturation: number;
 } {
-  // Philz parameters with fallbacks
   const creativity = strategy.creativity ?? 0.35;
   const resemblance = strategy.resemblance ?? 0.6;
-  const denoise_steps = strategy.denoise_steps ?? 18;
-  const sharpen = strategy.sharpen ?? 2.0;
-
-  // creativity (0.1–0.9) → sharpen intensity: low creativity = gentle, high = aggressive
-  const sharpenSigma = 0.4 + creativity * 1.2;
-
-  // denoise_steps (8–28) → aggressiveness of denoise: higher steps = more aggressive
-  const denoise = denoise_steps > 12;
-  const denoiseRadius = Math.min(5, Math.ceil(denoise_steps / 6));
-
-  // resemblance (0.3–1.6) → saturation: low resemblance = more saturated/artistic
-  const saturation = 0.95 + resemblance * 0.05;
-
-  // sharpen (0–10) parameter is already in sharp units, just apply directly
-  // (handled in main enhance logic)
+  const denoiseSteps = strategy.denoise_steps ?? 18;
 
   return {
-    sharpenSigma,
-    denoise,
-    denoiseRadius,
-    saturation,
+    sharpenSigma: 0.4 + creativity * 1.2,
+    denoise: denoiseSteps > 12,
+    denoiseRadius: Math.min(5, Math.ceil(denoiseSteps / 6)),
+    saturation: 0.95 + resemblance * 0.05,
   };
 }
 
-/**
- * Build a sequence of intermediate sizes that step from the source up to the
- * target in factors of at most 2x. The final entry is always exactly the
- * target size. E.g. 4x -> [2x, 4x]; 8x -> [2x, 4x, 8x]; 1.5x -> [1.5x].
- */
 function buildUpscaleSteps(
-  srcW: number,
-  srcH: number,
-  targetW: number,
-  targetH: number
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
 ): Array<[number, number]> {
   const steps: Array<[number, number]> = [];
-  let w = srcW;
-  let h = srcH;
-  // Double until the next double would overshoot the target.
-  while (w * 2 < targetW && h * 2 < targetH) {
-    w = Math.round(w * 2);
-    h = Math.round(h * 2);
-    steps.push([w, h]);
+  let width = sourceWidth;
+  let height = sourceHeight;
+
+  while (width * 2 < targetWidth && height * 2 < targetHeight) {
+    width = Math.round(width * 2);
+    height = Math.round(height * 2);
+    steps.push([width, height]);
   }
-  // Always finish exactly on the requested target dimensions.
-  steps.push([targetW, targetH]);
+
+  steps.push([targetWidth, targetHeight]);
   return steps;
 }
 
-/**
- * Apply N3uralia enhancement to an image buffer.
- * Performs real Lanczos upscaling + model-aware post-processing.
- */
 export async function enhanceImage(
   imageBuffer: Buffer,
-  strategy: EnhancementStrategy
+  strategy: EnhancementStrategy,
 ): Promise<EnhanceOutput> {
-  if (!imageBuffer || imageBuffer.length === 0) {
+  if (!imageBuffer?.length) {
     throw new Error('Invalid image buffer');
   }
 
-  // Respect EXIF orientation, then read true dimensions.
   const pipeline = sharp(imageBuffer, { failOn: 'none' }).rotate();
   const metadata = await pipeline.metadata();
+  const sourceWidth = metadata.width ?? 0;
+  const sourceHeight = metadata.height ?? 0;
 
-  const srcWidth = metadata.width ?? 0;
-  const srcHeight = metadata.height ?? 0;
-  if (!srcWidth || !srcHeight) {
+  if (!sourceWidth || !sourceHeight) {
     throw new Error('Unable to read image dimensions');
   }
 
-  // Compute target size, clamped to the pixel ceiling.
-  let targetWidth = Math.round(srcWidth * strategy.scaleFactor);
-  let targetHeight = Math.round(srcHeight * strategy.scaleFactor);
+  let targetWidth = Math.round(sourceWidth * strategy.scaleFactor);
+  let targetHeight = Math.round(sourceHeight * strategy.scaleFactor);
   const targetPixels = targetWidth * targetHeight;
+
   if (targetPixels > MAX_OUTPUT_PIXELS) {
     const ratio = Math.sqrt(MAX_OUTPUT_PIXELS / targetPixels);
     targetWidth = Math.round(targetWidth * ratio);
@@ -113,38 +84,35 @@ export async function enhanceImage(
   }
 
   const profile = getPhilzProfile(strategy);
-
-  // Denoise noisy / low-quality sources BEFORE enlarging so we don't
-  // amplify grain. Use median radius based on Philz denoise_steps parameter.
   let processed = pipeline;
+
   if (profile.denoise) {
     processed = processed.median(profile.denoiseRadius);
   }
 
-  // Progressive multi-step upscaling. Enlarging in repeated ~2x Lanczos
-  // steps (rather than one large jump) yields cleaner edges and fewer
-  // ringing/aliasing artifacts on high scale factors. Resampling happens
-  // in linear light for gamma-correct results.
-  const steps = buildUpscaleSteps(srcWidth, srcHeight, targetWidth, targetHeight);
+  const steps = buildUpscaleSteps(
+    sourceWidth,
+    sourceHeight,
+    targetWidth,
+    targetHeight,
+  );
   const speed = strategy.qualityTarget === 'speed';
-  for (let i = 0; i < steps.length; i++) {
-    const [w, h] = steps[i];
+
+  for (const [width, height] of steps) {
     if (speed) {
-      // Single fast pass for the speed target.
       processed = processed.resize(targetWidth, targetHeight, {
         kernel: sharp.kernel.lanczos3,
         fit: 'fill',
       });
       break;
     }
-    processed = processed.resize(w, h, {
+
+    processed = processed.resize(width, height, {
       kernel: sharp.kernel.lanczos3,
       fit: 'fill',
     });
   }
 
-  // Detail recovery via unsharp masking. Sigma calculated from Philz creativity
-  // parameter, adjusted for quality target. Sharpen parameter from preset scales intensity.
   let sigma = profile.sharpenSigma;
   if (strategy.qualityTarget === 'quality') {
     sigma *= 1.2;
@@ -152,88 +120,70 @@ export async function enhanceImage(
     sigma *= 0.7;
   }
 
-  // Apply sharpen parameter (0–10) from Philz preset to scale the effect
-  const sharpen = strategy.sharpen ?? 2.0;
-  const finalSharpenSigma = sigma * (sharpen / 2.5);
-  processed = processed.sharpen({ sigma: finalSharpenSigma, m1: 0.5, m2: 2.5 });
+  const sharpen = strategy.sharpen ?? 2;
+  const finalSharpenSigma = Math.max(0.01, sigma * (sharpen / 2.5));
+  processed = processed.sharpen({
+    sigma: finalSharpenSigma,
+    m1: 0.5,
+    m2: 2.5,
+  });
 
-  // Subtle color enrichment where the model calls for it.
-  if (profile.saturation !== 1.0) {
+  if (profile.saturation !== 1) {
     processed = processed.modulate({ saturation: profile.saturation });
   }
 
-  // Encode preserving the source format (PNG keeps alpha; WebP stays WebP).
   const inputFormat = metadata.format;
-  let outBuffer: Buffer;
-  let outFormat: EnhanceOutput['format'];
+  let outputBuffer: Buffer;
+  let outputFormat: EnhanceOutput['format'];
   let contentType: string;
 
   if (inputFormat === 'png') {
-    outBuffer = await processed.png({ compressionLevel: 9 }).toBuffer();
-    outFormat = 'png';
+    outputBuffer = await processed.png({ compressionLevel: 9 }).toBuffer();
+    outputFormat = 'png';
     contentType = 'image/png';
   } else if (inputFormat === 'webp') {
-    outBuffer = await processed
-      .webp({ quality: strategy.qualityTarget === 'speed' ? 82 : 92 })
+    outputBuffer = await processed
+      .webp({ quality: speed ? 82 : 92 })
       .toBuffer();
-    outFormat = 'webp';
+    outputFormat = 'webp';
     contentType = 'image/webp';
   } else {
-    // JPEG and everything else encode to high-quality JPEG.
-    outBuffer = await processed
-      .jpeg({ quality: strategy.qualityTarget === 'speed' ? 84 : 94, mozjpeg: true })
+    outputBuffer = await processed
+      .jpeg({ quality: speed ? 84 : 94, mozjpeg: true })
       .toBuffer();
-    outFormat = 'jpeg';
+    outputFormat = 'jpeg';
     contentType = 'image/jpeg';
   }
 
   return {
-    buffer: outBuffer,
+    buffer: outputBuffer,
     width: targetWidth,
     height: targetHeight,
-    format: outFormat,
+    format: outputFormat,
     contentType,
   };
 }
 
-/**
- * Validate enhancement strategy is compatible with the request.
- */
 export function validateStrategy(
   _imageBuffer: Buffer,
-  strategy: EnhancementStrategy
+  strategy: EnhancementStrategy,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (strategy.scaleFactor < 1 || strategy.scaleFactor > 8) {
+  if (!Number.isFinite(strategy.scaleFactor) || strategy.scaleFactor < 1 || strategy.scaleFactor > 8) {
     errors.push('Scale factor must be between 1x and 8x');
   }
 
-  if (strategy.preservationLevel < 0 || strategy.preservationLevel > 1) {
+  if (
+    !Number.isFinite(strategy.preservationLevel) ||
+    strategy.preservationLevel < 0 ||
+    strategy.preservationLevel > 1
+  ) {
     errors.push('Preservation level must be between 0 and 1');
   }
 
   return {
     valid: errors.length === 0,
     errors,
-  };
-}
-
-/**
- * Get quality metrics for the enhanced image based on strategy parameters.
- */
-export function getQualityMetrics(strategy: EnhancementStrategy): {
-  fidelity: number;
-  detail: number;
-  preservation: number;
-} {
-  const baseQuality = 0.85;
-  const qualityBoost = strategy.qualityTarget === 'quality' ? 0.15 : 0.05;
-
-  return {
-    fidelity: Math.min(baseQuality + qualityBoost, 0.99),
-    detail: Math.min(baseQuality + qualityBoost - 0.03, 0.96),
-    preservation:
-      strategy.preservationLevel * (1 - 0.01 * (strategy.scaleFactor - 1)),
   };
 }
