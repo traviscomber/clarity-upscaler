@@ -1,11 +1,23 @@
 /**
  * N3uralia Engine Interface
- * AI-powered image analysis and enhancement orchestration
+ * Deterministic image analysis, enhancement orchestration, and evaluation.
  */
 
 import { analyzeImage } from './analyzer';
 import { selectStrategy } from './strategy';
 import { enhanceImage } from './processing';
+import {
+  evaluateEnhancement,
+  type EnhancementMetrics,
+} from './quality';
+
+export interface ImageSignals {
+  brightness: number;
+  contrast: number;
+  edgeDensity: number;
+  darkClipping: number;
+  highlightClipping: number;
+}
 
 export interface ImageAnalysis {
   resolution: string;
@@ -16,6 +28,7 @@ export interface ImageAnalysis {
   recommendations: string[];
   recommendedPresetId?: string;
   recommendedPresetReason?: string;
+  signals?: ImageSignals;
 }
 
 export interface EnhancementStrategy {
@@ -24,7 +37,6 @@ export interface EnhancementStrategy {
   scaleFactor: number;
   preservationLevel: number;
   qualityTarget: 'speed' | 'balanced' | 'quality';
-  // Philz preset parameters (optional, for future GPU integration or reference)
   presetId?: string;
   creativity?: number;
   resemblance?: number;
@@ -37,59 +49,37 @@ export interface EnhancementStrategy {
 export interface EnhancementResult {
   analysis: ImageAnalysis;
   strategy: EnhancementStrategy;
-  metrics: {
-    fidelity: number;
-    detail: number;
-    preservation: number;
-  };
+  metrics: EnhancementMetrics;
   processingTime: number;
   originalSize: number;
   enhancedSize: number;
 }
 
-/**
- * Process an image through the complete enhancement pipeline
- */
+/** Process an image through analysis, planning, enhancement, and evaluation. */
 export async function processImage(
   imageBuffer: Buffer,
   options?: {
     scaleFactor?: number;
     qualityTarget?: 'speed' | 'balanced' | 'quality';
-  }
+  },
 ): Promise<EnhancementResult> {
   const startTime = Date.now();
 
-  // Step 1: Analyze image
   const analysis = await analyzeImage(imageBuffer);
-
-  // Step 2: Select enhancement strategy
   const strategy = selectStrategy(analysis, options);
-
-  // Step 3: Enhance image
   const enhanced = await enhanceImage(imageBuffer, strategy);
-
-  // Step 4: Evaluate quality
-  const metrics = {
-    fidelity: 0.98,
-    detail: 0.95,
-    preservation: 0.99,
-  };
-
-  const processingTime = Date.now() - startTime;
+  const metrics = await evaluateEnhancement(imageBuffer, enhanced.buffer);
 
   return {
     analysis,
     strategy,
     metrics,
-    processingTime,
+    processingTime: Date.now() - startTime,
     originalSize: imageBuffer.length,
     enhancedSize: enhanced.buffer.length,
   };
 }
 
-/**
- * Get available upscaling models
- */
 export function getAvailableModels(): string[] {
   return [
     'Architecture v1',
@@ -100,9 +90,6 @@ export function getAvailableModels(): string[] {
   ];
 }
 
-/**
- * Get enhancement presets for quick selection
- */
 export function getPresets() {
   return {
     architecture: {
