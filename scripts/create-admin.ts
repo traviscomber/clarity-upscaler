@@ -1,18 +1,41 @@
 import { createClient } from '@supabase/supabase-js'
 
 /**
- * Create admin user for Clar1ty AI
- * Usage: npx ts-node scripts/create-admin.ts
+ * Create an administrative user from explicit environment variables.
+ *
+ * Required:
+ * - NEXT_PUBLIC_SUPABASE_URL
+ * - SUPABASE_SERVICE_ROLE_KEY
+ * - CLAR1TY_ADMIN_EMAIL
+ * - CLAR1TY_ADMIN_PASSWORD
+ *
+ * Usage: npx tsx scripts/create-admin.ts
  */
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://uikvqvqkwgtwiyzttxgv.supabase.co'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const adminEmail = process.env.CLAR1TY_ADMIN_EMAIL
+const adminPassword = process.env.CLAR1TY_ADMIN_PASSWORD
+const adminName = process.env.CLAR1TY_ADMIN_NAME ?? 'Clar1ty Admin'
 
-if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY not set')
+const missing = [
+  ['NEXT_PUBLIC_SUPABASE_URL', supabaseUrl],
+  ['SUPABASE_SERVICE_ROLE_KEY', supabaseServiceKey],
+  ['CLAR1TY_ADMIN_EMAIL', adminEmail],
+  ['CLAR1TY_ADMIN_PASSWORD', adminPassword],
+]
+  .filter(([, value]) => !value)
+  .map(([name]) => name)
+
+if (missing.length > 0) {
+  throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+if (adminPassword!.length < 14) {
+  throw new Error('CLAR1TY_ADMIN_PASSWORD must contain at least 14 characters')
+}
+
+const supabase = createClient(supabaseUrl!, supabaseServiceKey!, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
@@ -20,35 +43,34 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 })
 
 async function createAdminUser() {
-  console.log('[Admin Setup] Creating admin user: admn@clar1ty.art')
+  console.log(`[Admin Setup] Creating administrative user: ${adminEmail}`)
 
-  try {
-    // Create user with admin API (service role key)
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: 'admn@clar1ty.art',
-      password: 'c4rlit0s',
-      user_metadata: {
-        full_name: 'Clar1ty Admin',
-      },
-      email_confirm: true, // Mark email as confirmed (no confirmation needed)
-    })
+  const { data, error } = await supabase.auth.admin.createUser({
+    email: adminEmail!,
+    password: adminPassword!,
+    user_metadata: {
+      full_name: adminName,
+      role: 'admin',
+    },
+    email_confirm: true,
+  })
 
-    if (error) {
-      if (error.message.includes('already exists')) {
-        console.log('[Admin Setup] User already exists ✓')
-        return
-      }
-      throw error
+  if (error) {
+    if (error.message.toLowerCase().includes('already')) {
+      console.log('[Admin Setup] User already exists')
+      return
     }
-
-    console.log('[Admin Setup] Admin user created successfully ✓')
-    console.log('[Admin Setup] Email: admn@clar1ty.art')
-    console.log('[Admin Setup] Password: c4rlit0s')
-    console.log('[Admin Setup] User ID:', data.user?.id)
-  } catch (error) {
-    console.error('[Admin Setup] Error creating admin user:', error)
-    process.exit(1)
+    throw error
   }
+
+  console.log('[Admin Setup] Administrative user created successfully')
+  console.log('[Admin Setup] User ID:', data.user?.id)
 }
 
-createAdminUser()
+createAdminUser().catch((error: unknown) => {
+  console.error(
+    '[Admin Setup] Failed:',
+    error instanceof Error ? error.message : 'Unknown error',
+  )
+  process.exit(1)
+})
