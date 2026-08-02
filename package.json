@@ -12,7 +12,8 @@
     "test:huggingface": "node --env-file-if-exists=.env.development.local scripts/test-huggingface.js",
     "test:huggingface:prod": "TEST_URL=https://clarity-upscaler.vercel.app node scripts/test-huggingface.js",
     "test:api": "node --experimental-strip-types --test __tests__/api/*.test.ts",
-    "test:lib": "node --experimental-strip-types --test __tests__/lib/*.test.ts"
+    "test:lib": "node --experimental-strip-types --test __tests__/lib/*.test.ts",
+    "test:production:model": "node scripts/test-production-model.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
