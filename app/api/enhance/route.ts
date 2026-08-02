@@ -51,6 +51,44 @@ export async function POST(request: Request) {
     const result = await processImage(buffer, { strategy });
     const { enhancement, metrics, benchmark, pipeline } = result;
 
+    const benchmarkSummary = {
+      id: benchmark.id,
+      engineVersion: benchmark.engineVersion,
+      model: benchmark.model,
+      presetId: benchmark.presetId,
+      scaleFactor: benchmark.scaleFactor,
+      qualityTarget: benchmark.qualityTarget,
+      inputChecksum: benchmark.input.checksum,
+      outputChecksum: benchmark.output.checksum,
+      metricMethod: metrics.method,
+    };
+
+    const exposedHeaders = [
+      'X-Engine-Version',
+      'X-Processing-Time',
+      'X-Enhancement-Time',
+      'X-Evaluation-Time',
+      'X-Original-Size',
+      'X-Enhanced-Size',
+      'X-Output-Width',
+      'X-Output-Height',
+      'X-Scale-Factor',
+      'X-Model',
+      'X-Metrics-Method',
+      'X-Fidelity',
+      'X-Detail',
+      'X-Preservation',
+      'X-Detail-Gain',
+      'X-Tone-Preservation',
+      'X-Tiled-Processing',
+      'X-Tile-Plan',
+      'X-Benchmark-Id',
+      'X-Benchmark-Summary',
+      'X-Input-Checksum',
+      'X-Output-Checksum',
+      'X-Pipeline-Steps',
+    ];
+
     const responseHeaders = {
       'Content-Type': enhancement.contentType,
       'Content-Length': String(enhancement.buffer.length),
@@ -77,35 +115,18 @@ export async function POST(request: Request) {
         ? encodeHeaderJson(enhancement.tilePlan)
         : '',
       'X-Benchmark-Id': benchmark.id,
+      'X-Benchmark-Summary': encodeHeaderJson(benchmarkSummary),
       'X-Input-Checksum': benchmark.input.checksum,
       'X-Output-Checksum': benchmark.output.checksum,
-      'X-Pipeline-Steps': encodeHeaderJson(pipeline.steps),
-      'X-Benchmark-Record': encodeHeaderJson(benchmark),
-      'Access-Control-Expose-Headers': [
-        'X-Engine-Version',
-        'X-Processing-Time',
-        'X-Enhancement-Time',
-        'X-Evaluation-Time',
-        'X-Original-Size',
-        'X-Enhanced-Size',
-        'X-Output-Width',
-        'X-Output-Height',
-        'X-Scale-Factor',
-        'X-Model',
-        'X-Metrics-Method',
-        'X-Fidelity',
-        'X-Detail',
-        'X-Preservation',
-        'X-Detail-Gain',
-        'X-Tone-Preservation',
-        'X-Tiled-Processing',
-        'X-Tile-Plan',
-        'X-Benchmark-Id',
-        'X-Input-Checksum',
-        'X-Output-Checksum',
-        'X-Pipeline-Steps',
-        'X-Benchmark-Record',
-      ].join(', '),
+      'X-Pipeline-Steps': encodeHeaderJson(
+        pipeline.steps.map(({ id, stage, status, durationMs }) => ({
+          id,
+          stage,
+          status,
+          durationMs,
+        })),
+      ),
+      'Access-Control-Expose-Headers': exposedHeaders.join(', '),
     };
 
     return new Response(new Uint8Array(enhancement.buffer), {
