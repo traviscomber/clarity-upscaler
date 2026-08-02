@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install --no-frozen-lockfile --include=optional",
+  "installCommand": "pnpm install --lockfile=false",
   "env": {
     "NEXT_PUBLIC_APP_NAME": "Clar1ty Studio"
   },
