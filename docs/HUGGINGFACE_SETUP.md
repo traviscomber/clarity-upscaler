@@ -85,7 +85,7 @@ N3URALIA_ONNX_MODEL_ID_2=realesrgan-x2plus-onnx
 N3URALIA_ONNX_MODEL_URL_2=https://huggingface.co/xinntao/Real-ESRGAN-2x-onnx/resolve/main/RealESRGAN_x2plus.onnx
 
 # Token de Hugging Face (si es necesario para repositorios privados)
-HUGGINGFACE_TOKEN=hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HUGGINGFACE_ACCESS_TOKEN=hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 ### Opción B: Vercel Environment Variables
@@ -107,7 +107,7 @@ Value: realesrgan-x4plus-onnx
 Name: N3URALIA_ONNX_MODEL_URL
 Value: https://huggingface.co/xinntao/Real-ESRGAN-4x-plus-onnx/resolve/main/RealESRGAN_x4plus.onnx
 
-Name: HUGGINGFACE_TOKEN
+Name: HUGGINGFACE_ACCESS_TOKEN
 Value: hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 

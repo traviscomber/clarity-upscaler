@@ -42,7 +42,7 @@ interface NeuralStatusResponse {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const probe = request.nextUrl.searchParams.has('probe');
-    const token = process.env.HUGGINGFACE_TOKEN;
+    const token = process.env.HUGGINGFACE_ACCESS_TOKEN;
     const response: NeuralStatusResponse = {
       ready: false,
       configured: false,
