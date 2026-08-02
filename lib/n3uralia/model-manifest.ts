@@ -27,7 +27,22 @@ export const SUPER_RESOLUTION_MODELS: SuperResolutionModelManifest[] = [
     sourceUrl: 'https://github.com/xinntao/Real-ESRGAN',
     modelUrlEnv: 'N3URALIA_ONNX_MODEL_URL',
     description:
-      'General-purpose 4x neural super-resolution target. Configure an ONNX conversion compatible with RGB float32 NCHW input in the environment variable.',
+      'General-purpose 4x neural super-resolution model. Available on Hugging Face: xinntao/Real-ESRGAN-4x-plus-onnx',
+  },
+  {
+    id: 'realesrgan-x2plus-onnx',
+    name: 'Real-ESRGAN x2plus (ONNX)',
+    architecture: 'RRDBNet / Real-ESRGAN',
+    scale: 2,
+    inputLayout: 'nchw',
+    outputLayout: 'auto',
+    tileSize: 128,
+    overlap: 8,
+    license: 'BSD-3-Clause',
+    sourceUrl: 'https://github.com/xinntao/Real-ESRGAN',
+    modelUrlEnv: 'N3URALIA_ONNX_MODEL_URL_2',
+    description:
+      '2x neural super-resolution model. Faster than 4x. Available on Hugging Face: xinntao/Real-ESRGAN-2x-onnx',
   },
 ];
 
