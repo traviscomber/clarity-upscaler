@@ -19,6 +19,13 @@ type DisplayMetrics = {
   preservation: number;
 };
 
+type BackendInfo = {
+  id: string;
+  neural: boolean;
+  modelId?: string;
+  fallbackReason?: string;
+};
+
 async function readApiError(response: Response, fallback: string): Promise<string> {
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -66,11 +73,13 @@ export default function StudioPage() {
   const [studioState, setStudioState] = useState<StudioState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<DisplayMetrics | null>(null);
+  const [backend, setBackend] = useState<BackendInfo | null>(null);
 
   const handleFileSelect = useCallback(async (selectedFile: File) => {
     setFile(selectedFile);
     setAfterImage(null);
     setMetrics(null);
+    setBackend(null);
     setErrorMessage(null);
     setStudioState('analyzing');
 
@@ -151,6 +160,7 @@ export default function StudioPage() {
     setStudioState('enhancing');
     setErrorMessage(null);
     setMetrics(null);
+    setBackend(null);
 
     try {
       const formData = new FormData();
@@ -171,12 +181,20 @@ export default function StudioPage() {
         detail: readRequiredMetric(response.headers, 'X-Detail'),
         preservation: readRequiredMetric(response.headers, 'X-Preservation'),
       };
+      const backendInfo: BackendInfo = {
+        id: response.headers.get('X-SR-Backend') || 'unknown',
+        neural: response.headers.get('X-SR-Neural') === 'true',
+        modelId: response.headers.get('X-SR-Model-Id') || undefined,
+        fallbackReason:
+          response.headers.get('X-SR-Fallback-Reason') || undefined,
+      };
 
       const blob = await response.blob();
       const reader = new FileReader();
       reader.onload = (event) => {
         setAfterImage(event.target?.result as string);
         setMetrics(measuredMetrics);
+        setBackend(backendInfo);
         setStudioState('done');
       };
       reader.onerror = () => {
@@ -197,6 +215,7 @@ export default function StudioPage() {
     setBeforeImage(null);
     setAfterImage(null);
     setMetrics(null);
+    setBackend(null);
     setErrorMessage(null);
     setStudioState('idle');
   }, []);
@@ -318,6 +337,7 @@ export default function StudioPage() {
                     beforeImage={beforeImage}
                     afterImage={afterImage}
                     metrics={metrics}
+                    backend={backend ?? undefined}
                   />
                 ) : beforeImage ? (
                   <motion.div
