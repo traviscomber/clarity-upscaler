@@ -22,6 +22,9 @@ export function selectStrategy(
   // Calculate preservation level based on original quality
   const preservationLevel = getPreservationLevel(analysis.quality);
 
+  // Use ONNX neural backend for quality and balanced modes
+  const superResolutionBackend = qualityTarget !== 'speed' ? 'onnx' : undefined;
+
   return {
     name: getStrategyName(model, scaleFactor),
     model,
@@ -29,6 +32,7 @@ export function selectStrategy(
     preservationLevel,
     qualityTarget,
     presetId,
+    superResolutionBackend,
   };
 }
 
