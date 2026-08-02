@@ -1,6 +1,6 @@
 import type { EnhancementStrategy, ImageAnalysis } from './engine';
-import type { EnhanceOutput } from './processing';
 import type { EnhancementMetrics } from './quality';
+import type { SuperResolutionResult } from './super-resolution';
 
 export type EngineStage =
   | 'analysis'
@@ -30,7 +30,7 @@ export interface EngineContext {
   workingBuffer: Buffer;
   analysis?: ImageAnalysis;
   strategy?: EnhancementStrategy;
-  enhancement?: EnhanceOutput;
+  enhancement?: SuperResolutionResult;
   metrics?: EnhancementMetrics;
   timings: EngineTiming[];
   logs: EngineLogEntry[];
