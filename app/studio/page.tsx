@@ -1,17 +1,37 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { RotateCcw, Sparkles } from 'lucide-react';
-import UploadZone from '@/components/upload-zone';
-import ImageAnalysisPanel from '@/components/image-analysis';
-import EnhancementPanel from '@/components/enhancement-panel';
 import BeforeAfter from '@/components/before-after';
-import { selectStrategy } from '@/lib/n3uralia/strategy';
+import EnhancementPanel from '@/components/enhancement-panel';
+import ImageAnalysisPanel from '@/components/image-analysis';
+import UploadZone from '@/components/upload-zone';
+import type { EnhancementStrategy, ImageAnalysis } from '@/lib/n3uralia/engine';
 import { getPreset } from '@/lib/n3uralia/presets';
-import type { ImageAnalysis, EnhancementStrategy } from '@/lib/n3uralia/engine';
+import { selectStrategy } from '@/lib/n3uralia/strategy';
 
 type StudioState = 'idle' | 'analyzing' | 'ready' | 'enhancing' | 'done' | 'error';
+
+type DisplayMetrics = {
+  fidelity: number;
+  detail: number;
+  preservation: number;
+};
+
+function readRequiredMetric(headers: Headers, name: string): number {
+  const rawValue = headers.get(name);
+  if (rawValue === null) {
+    throw new Error(`Enhancement response is missing ${name}`);
+  }
+
+  const percentage = Number(rawValue);
+  if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
+    throw new Error(`Enhancement response contains invalid ${name}`);
+  }
+
+  return percentage / 100;
+}
 
 export default function StudioPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -21,11 +41,7 @@ export default function StudioPage() {
   const [afterImage, setAfterImage] = useState<string | null>(null);
   const [studioState, setStudioState] = useState<StudioState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<{
-    fidelity: number;
-    detail: number;
-    preservation: number;
-  } | null>(null);
+  const [metrics, setMetrics] = useState<DisplayMetrics | null>(null);
 
   const handleFileSelect = useCallback(async (selectedFile: File) => {
     setFile(selectedFile);
@@ -34,9 +50,8 @@ export default function StudioPage() {
     setErrorMessage(null);
     setStudioState('analyzing');
 
-    // Build preview immediately
     const reader = new FileReader();
-    reader.onload = (e) => setBeforeImage(e.target?.result as string);
+    reader.onload = (event) => setBeforeImage(event.target?.result as string);
     reader.readAsDataURL(selectedFile);
 
     try {
@@ -49,66 +64,70 @@ export default function StudioPage() {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error ?? 'Analysis failed');
+        const error = await response.json();
+        throw new Error(error.error ?? 'Analysis failed');
       }
 
       const data = await response.json();
-      if (data.success) {
-        setAnalysis(data.analysis);
-        setStrategy(selectStrategy(data.analysis));
-        setStudioState('ready');
+      if (!data.success) {
+        throw new Error('Analysis response was not successful');
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Analysis failed';
-      setErrorMessage(msg);
+
+      setAnalysis(data.analysis);
+      setStrategy(selectStrategy(data.analysis));
+      setStudioState('ready');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Analysis failed');
       setStudioState('error');
     }
   }, []);
 
   const handleScaleChange = useCallback(
     (scale: number) => {
-      if (strategy && analysis) {
-        setStrategy(
-          selectStrategy(analysis, {
-            scaleFactor: scale,
-            qualityTarget: strategy.qualityTarget,
-            presetId: strategy.presetId,
-          })
-        );
-      }
+      if (!strategy || !analysis) return;
+
+      setStrategy(
+        selectStrategy(analysis, {
+          scaleFactor: scale,
+          qualityTarget: strategy.qualityTarget,
+          presetId: strategy.presetId,
+        }),
+      );
     },
-    [strategy, analysis]
+    [strategy, analysis],
   );
 
   const handlePresetChange = useCallback(
     (presetId: string) => {
-      if (strategy && analysis) {
-        const preset = getPreset(presetId);
-        const updatedStrategy = selectStrategy(analysis, {
-          scaleFactor: strategy.scaleFactor,
-          qualityTarget: strategy.qualityTarget,
-          presetId,
-        });
-        setStrategy({
-          ...updatedStrategy,
-          presetId,
-          creativity: preset.creativity,
-          resemblance: preset.resemblance,
-          denoise_steps: preset.denoise_steps,
-          sharpen: preset.sharpen,
-          dynamic: preset.dynamic,
-          tile_overlap: preset.tile_overlap,
-        });
-      }
+      if (!strategy || !analysis) return;
+
+      const preset = getPreset(presetId);
+      const updatedStrategy = selectStrategy(analysis, {
+        scaleFactor: strategy.scaleFactor,
+        qualityTarget: strategy.qualityTarget,
+        presetId,
+      });
+
+      setStrategy({
+        ...updatedStrategy,
+        presetId,
+        creativity: preset.creativity,
+        resemblance: preset.resemblance,
+        denoise_steps: preset.denoise_steps,
+        sharpen: preset.sharpen,
+        dynamic: preset.dynamic,
+        tile_overlap: preset.tile_overlap,
+      });
     },
-    [strategy, analysis]
+    [strategy, analysis],
   );
 
   const handleEnhance = useCallback(async () => {
     if (!file || !strategy) return;
+
     setStudioState('enhancing');
     setErrorMessage(null);
+    setMetrics(null);
 
     try {
       const formData = new FormData();
@@ -121,26 +140,30 @@ export default function StudioPage() {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error ?? 'Enhancement failed');
+        const error = await response.json();
+        throw new Error(error.error ?? 'Enhancement failed');
       }
 
-      // Read quality metrics from response headers
-      const fidelity = Number(response.headers.get('X-Fidelity') ?? 98) / 100;
-      const detail = Number(response.headers.get('X-Detail') ?? 95) / 100;
-      const preservation = Number(response.headers.get('X-Preservation') ?? 99) / 100;
+      const measuredMetrics: DisplayMetrics = {
+        fidelity: readRequiredMetric(response.headers, 'X-Fidelity'),
+        detail: readRequiredMetric(response.headers, 'X-Detail'),
+        preservation: readRequiredMetric(response.headers, 'X-Preservation'),
+      };
 
       const blob = await response.blob();
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setAfterImage(e.target?.result as string);
-        setMetrics({ fidelity, detail, preservation });
+      reader.onload = (event) => {
+        setAfterImage(event.target?.result as string);
+        setMetrics(measuredMetrics);
         setStudioState('done');
       };
+      reader.onerror = () => {
+        setErrorMessage('Unable to read enhanced image result');
+        setStudioState('error');
+      };
       reader.readAsDataURL(blob);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Enhancement failed';
-      setErrorMessage(msg);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Enhancement failed');
       setStudioState('error');
     }
   }, [file, strategy]);
@@ -161,17 +184,16 @@ export default function StudioPage() {
 
   return (
     <div className="text-[#e8e4dd]">
-      {/* Page header */}
-      <div className="border-b border-[#3a3530] bg-[#1f1a16] sticky top-[57px] z-40">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+      <div className="sticky top-[57px] z-40 border-b border-[#3a3530] bg-[#1f1a16]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
             <h1 className="text-lg font-semibold text-[#e8e4dd]">Studio</h1>
-            <p className="text-[#8b8278] text-xs mt-0.5">N3uralia image enhancement engine</p>
+            <p className="mt-0.5 text-xs text-[#8b8278]">N3uralia image enhancement engine</p>
           </div>
           {file && (
             <button
               onClick={handleReset}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#3a3530] text-[#8b8278] hover:text-[#e8e4dd] hover:border-[#d4a574]/50 transition-colors text-sm"
+              className="flex items-center gap-2 rounded-lg border border-[#3a3530] px-4 py-2 text-sm text-[#8b8278] transition-colors hover:border-[#d4a574]/50 hover:text-[#e8e4dd]"
             >
               <RotateCcw size={14} />
               New Image
@@ -180,7 +202,7 @@ export default function StudioPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="mx-auto max-w-7xl px-6 py-10">
         <AnimatePresence mode="wait">
           {studioState === 'idle' ? (
             <motion.div
@@ -189,15 +211,15 @@ export default function StudioPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3 }}
-              className="max-w-2xl mx-auto"
+              className="mx-auto max-w-2xl"
             >
-              <div className="text-center mb-10">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#2d2620] mb-4">
+              <div className="mb-10 text-center">
+                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#2d2620]">
                   <Sparkles size={22} className="text-[#d4a574]" strokeWidth={1.5} />
                 </div>
-                <h2 className="text-2xl font-semibold mb-2">Upload an image</h2>
-                <p className="text-[#8b8278] text-sm leading-relaxed">
-                  PNG, JPEG, or WebP up to 50 MB. The engine will analyze content and recommend the optimal model.
+                <h2 className="mb-2 text-2xl font-semibold">Upload an image</h2>
+                <p className="text-sm leading-relaxed text-[#8b8278]">
+                  PNG, JPEG, or WebP up to 50 MB. The engine will analyze measurable image signals and recommend a processing preset.
                 </p>
               </div>
               <UploadZone onFileSelect={handleFileSelect} isLoading={isAnalyzing} />
@@ -208,28 +230,29 @@ export default function StudioPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+              className="grid grid-cols-1 gap-6 lg:grid-cols-3"
             >
-              {/* Left column */}
-              <div className="lg:col-span-1 space-y-4">
-                {/* Analysis panel */}
+              <div className="space-y-4 lg:col-span-1">
                 {analysis ? (
                   <ImageAnalysisPanel analysis={analysis} />
                 ) : (
-                  <div className="bg-[#1f1a16] border border-[#3a3530] rounded-lg p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-2 h-2 rounded-full bg-[#d4a574] animate-pulse" />
-                      <h2 className="text-[#e8e4dd] font-semibold text-sm">AI Analysis</h2>
+                  <div className="rounded-lg border border-[#3a3530] bg-[#1f1a16] p-6">
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-[#d4a574]" />
+                      <h2 className="text-sm font-semibold text-[#e8e4dd]">Image Analysis</h2>
                     </div>
                     <div className="space-y-3">
-                      {[80, 60, 70, 50].map((w, i) => (
-                        <div key={i} className="h-3 rounded bg-[#2d2620] animate-pulse" style={{ width: `${w}%` }} />
+                      {[80, 60, 70, 50].map((width, index) => (
+                        <div
+                          key={index}
+                          className="h-3 animate-pulse rounded bg-[#2d2620]"
+                          style={{ width: `${width}%` }}
+                        />
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Enhancement panel */}
                 {strategy ? (
                   <EnhancementPanel
                     strategy={strategy}
@@ -242,31 +265,33 @@ export default function StudioPage() {
                     recommendedPresetReason={analysis?.recommendedPresetReason}
                   />
                 ) : (
-                  <div className="bg-[#1f1a16] border border-[#3a3530] rounded-lg p-6">
+                  <div className="rounded-lg border border-[#3a3530] bg-[#1f1a16] p-6">
                     <div className="space-y-3">
-                      {[90, 65, 75].map((w, i) => (
-                        <div key={i} className="h-3 rounded bg-[#2d2620] animate-pulse" style={{ width: `${w}%` }} />
+                      {[90, 65, 75].map((width, index) => (
+                        <div
+                          key={index}
+                          className="h-3 animate-pulse rounded bg-[#2d2620]"
+                          style={{ width: `${width}%` }}
+                        />
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Error state */}
                 {studioState === 'error' && errorMessage && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-[#1f1a16] border border-[#ff6b6b]/30 rounded-lg p-4"
+                    className="rounded-lg border border-[#ff6b6b]/30 bg-[#1f1a16] p-4"
                   >
-                    <p className="text-[#ff6b6b] text-sm font-medium mb-1">Error</p>
-                    <p className="text-[#8b8278] text-xs">{errorMessage}</p>
+                    <p className="mb-1 text-sm font-medium text-[#ff6b6b]">Error</p>
+                    <p className="text-xs text-[#8b8278]">{errorMessage}</p>
                   </motion.div>
                 )}
               </div>
 
-              {/* Right column — preview */}
               <div className="lg:col-span-2">
-                {beforeImage && (studioState === 'done' && afterImage && metrics) ? (
+                {beforeImage && studioState === 'done' && afterImage && metrics ? (
                   <BeforeAfter
                     beforeImage={beforeImage}
                     afterImage={afterImage}
@@ -276,24 +301,22 @@ export default function StudioPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-[#1f1a16] border border-[#3a3530] rounded-lg overflow-hidden"
+                    className="overflow-hidden rounded-lg border border-[#3a3530] bg-[#1f1a16]"
                     style={{ aspectRatio: '16/9' }}
                   >
-                    <div className="relative w-full h-full">
-                      <img
-                        src={beforeImage}
-                        alt="Image preview"
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="relative h-full w-full">
+                      <img src={beforeImage} alt="Image preview" className="h-full w-full object-cover" />
                       {(isAnalyzing || isEnhancing) && (
                         <div className="absolute inset-0 flex items-center justify-center bg-[#1a1410]/60 backdrop-blur-sm">
                           <div className="text-center">
-                            <div className="w-10 h-10 border-2 border-[#d4a574] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                            <p className="text-[#e8e4dd] text-sm font-medium">
+                            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[#d4a574] border-t-transparent" />
+                            <p className="text-sm font-medium text-[#e8e4dd]">
                               {isAnalyzing ? 'Analyzing image…' : 'Enhancing image…'}
                             </p>
-                            <p className="text-[#8b8278] text-xs mt-1">
-                              {isEnhancing ? `${strategy?.scaleFactor}x upscale · ${strategy?.model}` : 'Detecting content and model'}
+                            <p className="mt-1 text-xs text-[#8b8278]">
+                              {isEnhancing
+                                ? `${strategy?.scaleFactor}x upscale · ${strategy?.model}`
+                                : 'Measuring image signals'}
                             </p>
                           </div>
                         </div>
