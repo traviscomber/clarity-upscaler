@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRef, useState } from 'react';
 import { Cpu, BarChart3, Layers, Shield, Zap, SlidersHorizontal, ArrowRight } from 'lucide-react';
 
 const features = [
@@ -45,6 +46,42 @@ const stats = [
 ];
 
 export default function Home() {
+  const [sliderPos, setSliderPos] = useState(50);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+
+  const handleMouseDown = () => {
+    isDragging.current = true;
+  };
+
+  const handleMouseUp = () => {
+    isDragging.current = false;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging.current || !sliderRef.current) return;
+    
+    const rect = sliderRef.current.getBoundingClientRect();
+    const newPos = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    setSliderPos(newPos);
+  };
+
+  const handleTouchStart = () => {
+    isDragging.current = true;
+  };
+
+  const handleTouchEnd = () => {
+    isDragging.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDragging.current || !sliderRef.current) return;
+    
+    const rect = sliderRef.current.getBoundingClientRect();
+    const newPos = Math.max(0, Math.min(100, ((e.touches[0].clientX - rect.left) / rect.width) * 100));
+    setSliderPos(newPos);
+  };
+
   return (
     <div className="text-[#e8e4dd]">
       {/* Hero */}
@@ -110,34 +147,49 @@ export default function Home() {
             transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 }}
             className="relative"
           >
-            <div className="relative aspect-[4/5] max-w-md mx-auto rounded-2xl overflow-hidden border border-[#3a3530] shadow-2xl shadow-black/50">
+            <div 
+              ref={sliderRef}
+              className="relative aspect-[4/5] max-w-md mx-auto rounded-2xl overflow-hidden border border-[#3a3530] shadow-2xl shadow-black/50 cursor-col-resize select-none"
+              onMouseMove={handleMouseMove}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               {/* Sharp (after) */}
               <img
                 src="/showcase/hero-detail.png"
                 alt="Golden eagle enhanced with Clar1ty showing razor-sharp feather detail"
                 className="absolute inset-0 w-full h-full object-cover"
+                draggable={false}
               />
-              {/* Blurred (before) clipped to left half */}
-              <div className="absolute inset-0" style={{ clipPath: 'inset(0 50% 0 0)' }}>
+              {/* Blurred (before) clipped to left portion */}
+              <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
                 <img
                   src="/showcase/hero-detail.png"
                   alt=""
                   aria-hidden="true"
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ filter: 'blur(6px) brightness(0.85) saturate(0.9)' }}
+                  draggable={false}
                 />
               </div>
               {/* Divider */}
-              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#d4a574] shadow-[0_0_12px_rgba(212,165,116,0.6)]">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#d4a574] flex items-center justify-center">
+              <div 
+                className="absolute inset-y-0 w-0.5 bg-[#d4a574] shadow-[0_0_12px_rgba(212,165,116,0.6)] transition-none"
+                style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#d4a574] flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
                   <SlidersHorizontal size={16} className="text-[#1a1410]" />
                 </div>
               </div>
               {/* Labels */}
-              <span className="absolute top-4 left-4 text-[11px] font-mono uppercase tracking-widest text-[#e8e4dd] bg-[#1a1410]/70 backdrop-blur px-2.5 py-1 rounded-md">
+              <span className="absolute top-4 left-4 text-[11px] font-mono uppercase tracking-widest text-[#e8e4dd] bg-[#1a1410]/70 backdrop-blur px-2.5 py-1 rounded-md pointer-events-none">
                 Before
               </span>
-              <span className="absolute top-4 right-4 text-[11px] font-mono uppercase tracking-widest text-[#d4a574] bg-[#1a1410]/70 backdrop-blur px-2.5 py-1 rounded-md">
+              <span className="absolute top-4 right-4 text-[11px] font-mono uppercase tracking-widest text-[#d4a574] bg-[#1a1410]/70 backdrop-blur px-2.5 py-1 rounded-md pointer-events-none">
                 After
               </span>
             </div>
