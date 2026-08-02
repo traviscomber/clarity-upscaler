@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import {
   processImage,
   type EnhancementStrategy,
@@ -51,6 +52,16 @@ export async function POST(request: Request) {
     const result = await processImage(buffer, { strategy });
     const { enhancement, metrics, benchmark, pipeline } = result;
 
+    const shouldExportLossless = strategy.qualityTarget !== 'speed';
+    const responseBuffer = shouldExportLossless
+      ? await sharp(enhancement.buffer, { failOn: 'none' })
+          .png({ compressionLevel: 4, adaptiveFiltering: true })
+          .toBuffer()
+      : enhancement.buffer;
+    const responseContentType = shouldExportLossless
+      ? 'image/png'
+      : enhancement.contentType;
+
     const benchmarkSummary = {
       id: benchmark.id,
       engineVersion: benchmark.engineVersion,
@@ -87,17 +98,19 @@ export async function POST(request: Request) {
       'X-Input-Checksum',
       'X-Output-Checksum',
       'X-Pipeline-Steps',
+      'X-Export-Format',
     ];
 
     const responseHeaders = {
-      'Content-Type': enhancement.contentType,
-      'Content-Length': String(enhancement.buffer.length),
+      'Content-Type': responseContentType,
+      'Content-Length': String(responseBuffer.length),
+      'Content-Disposition': 'attachment; filename="clar1ty-upscaled.png"',
       'X-Engine-Version': result.engineVersion,
       'X-Processing-Time': String(result.processingTime),
       'X-Enhancement-Time': String(result.enhancementTime),
       'X-Evaluation-Time': String(result.evaluationTime),
       'X-Original-Size': String(result.originalSize),
-      'X-Enhanced-Size': String(result.enhancedSize),
+      'X-Enhanced-Size': String(responseBuffer.length),
       'X-Output-Width': String(enhancement.width),
       'X-Output-Height': String(enhancement.height),
       'X-Scale-Factor': String(strategy.scaleFactor),
@@ -126,10 +139,11 @@ export async function POST(request: Request) {
           durationMs,
         })),
       ),
+      'X-Export-Format': shouldExportLossless ? 'png-lossless' : enhancement.format,
       'Access-Control-Expose-Headers': exposedHeaders.join(', '),
     };
 
-    return new Response(new Uint8Array(enhancement.buffer), {
+    return new Response(new Uint8Array(responseBuffer), {
       headers: responseHeaders,
     });
   } catch (error) {
