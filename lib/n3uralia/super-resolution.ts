@@ -11,6 +11,7 @@ export interface SuperResolutionRequest {
 export interface SuperResolutionResult extends EnhanceOutput {
   backend: SuperResolutionBackendId;
   neural: boolean;
+  modelId?: string;
   fallbackReason?: string;
 }
 
@@ -31,6 +32,7 @@ const classicalBackend: SuperResolutionBackend = {
       ...result,
       backend: 'classical',
       neural: false,
+      modelId: 'n3uralia-classical-v1',
     };
   },
 };
