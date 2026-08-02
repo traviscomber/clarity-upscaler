@@ -1,7 +1,6 @@
 /**
  * N3uralia Processing Pipeline
- * Real server-side image enhancement powered by sharp (Lanczos resampling,
- * model-aware sharpening, denoise, and format-preserving encode).
+ * Deterministic Sharp/libvips enhancement with materialized progressive stages.
  */
 
 import sharp from 'sharp';
@@ -15,7 +14,6 @@ export interface EnhanceOutput {
   contentType: string;
 }
 
-// Cap the output so extreme scale factors cannot exhaust memory.
 const MAX_OUTPUT_PIXELS = 40_000_000;
 
 function getPhilzProfile(strategy: EnhancementStrategy): {
@@ -56,6 +54,24 @@ function buildUpscaleSteps(
   return steps;
 }
 
+async function materializeResizeStages(
+  inputBuffer: Buffer,
+  steps: Array<[number, number]>,
+): Promise<Buffer> {
+  let currentBuffer = inputBuffer;
+
+  for (const [width, height] of steps) {
+    currentBuffer = await sharp(currentBuffer, { failOn: 'none' })
+      .resize(width, height, {
+        kernel: sharp.kernel.lanczos3,
+        fit: 'fill',
+      })
+      .toBuffer();
+  }
+
+  return currentBuffer;
+}
+
 export async function enhanceImage(
   imageBuffer: Buffer,
   strategy: EnhancementStrategy,
@@ -64,8 +80,9 @@ export async function enhanceImage(
     throw new Error('Invalid image buffer');
   }
 
-  const pipeline = sharp(imageBuffer, { failOn: 'none' }).rotate();
-  const metadata = await pipeline.metadata();
+  const metadata = await sharp(imageBuffer, { failOn: 'none' })
+    .rotate()
+    .metadata();
   const sourceWidth = metadata.width ?? 0;
   const sourceHeight = metadata.height ?? 0;
 
@@ -84,34 +101,24 @@ export async function enhanceImage(
   }
 
   const profile = getPhilzProfile(strategy);
-  let processed = pipeline;
+
+  let preparedBuffer = await sharp(imageBuffer, { failOn: 'none' })
+    .rotate()
+    .toBuffer();
 
   if (profile.denoise) {
-    processed = processed.median(profile.denoiseRadius);
+    preparedBuffer = await sharp(preparedBuffer, { failOn: 'none' })
+      .median(profile.denoiseRadius)
+      .toBuffer();
   }
 
-  const steps = buildUpscaleSteps(
-    sourceWidth,
-    sourceHeight,
-    targetWidth,
-    targetHeight,
-  );
   const speed = strategy.qualityTarget === 'speed';
+  const steps = speed
+    ? [[targetWidth, targetHeight] as [number, number]]
+    : buildUpscaleSteps(sourceWidth, sourceHeight, targetWidth, targetHeight);
 
-  for (const [width, height] of steps) {
-    if (speed) {
-      processed = processed.resize(targetWidth, targetHeight, {
-        kernel: sharp.kernel.lanczos3,
-        fit: 'fill',
-      });
-      break;
-    }
-
-    processed = processed.resize(width, height, {
-      kernel: sharp.kernel.lanczos3,
-      fit: 'fill',
-    });
-  }
+  const resizedBuffer = await materializeResizeStages(preparedBuffer, steps);
+  let finalPipeline = sharp(resizedBuffer, { failOn: 'none' });
 
   let sigma = profile.sharpenSigma;
   if (strategy.qualityTarget === 'quality') {
@@ -121,15 +128,16 @@ export async function enhanceImage(
   }
 
   const sharpen = strategy.sharpen ?? 2;
-  const finalSharpenSigma = Math.max(0.01, sigma * (sharpen / 2.5));
-  processed = processed.sharpen({
-    sigma: finalSharpenSigma,
-    m1: 0.5,
-    m2: 2.5,
-  });
+  if (sharpen > 0) {
+    finalPipeline = finalPipeline.sharpen({
+      sigma: sigma * (sharpen / 2.5),
+      m1: 0.5,
+      m2: 2.5,
+    });
+  }
 
   if (profile.saturation !== 1) {
-    processed = processed.modulate({ saturation: profile.saturation });
+    finalPipeline = finalPipeline.modulate({ saturation: profile.saturation });
   }
 
   const inputFormat = metadata.format;
@@ -138,17 +146,17 @@ export async function enhanceImage(
   let contentType: string;
 
   if (inputFormat === 'png') {
-    outputBuffer = await processed.png({ compressionLevel: 9 }).toBuffer();
+    outputBuffer = await finalPipeline.png({ compressionLevel: 9 }).toBuffer();
     outputFormat = 'png';
     contentType = 'image/png';
   } else if (inputFormat === 'webp') {
-    outputBuffer = await processed
+    outputBuffer = await finalPipeline
       .webp({ quality: speed ? 82 : 92 })
       .toBuffer();
     outputFormat = 'webp';
     contentType = 'image/webp';
   } else {
-    outputBuffer = await processed
+    outputBuffer = await finalPipeline
       .jpeg({ quality: speed ? 84 : 94, mozjpeg: true })
       .toBuffer();
     outputFormat = 'jpeg';
@@ -170,7 +178,11 @@ export function validateStrategy(
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (!Number.isFinite(strategy.scaleFactor) || strategy.scaleFactor < 1 || strategy.scaleFactor > 8) {
+  if (
+    !Number.isFinite(strategy.scaleFactor) ||
+    strategy.scaleFactor < 1 ||
+    strategy.scaleFactor > 8
+  ) {
     errors.push('Scale factor must be between 1x and 8x');
   }
 
