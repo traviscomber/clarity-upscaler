@@ -19,6 +19,30 @@ type DisplayMetrics = {
   preservation: number;
 };
 
+async function readApiError(response: Response, fallback: string): Promise<string> {
+  const contentType = response.headers.get('content-type') ?? '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      const payload = (await response.json()) as {
+        error?: string;
+        details?: string;
+      };
+      return payload.details || payload.error || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  const text = await response.text();
+  if (!text) return `${fallback} (HTTP ${response.status})`;
+
+  const looksLikeHtml = /<!doctype html|<html/i.test(text);
+  return looksLikeHtml
+    ? `${fallback} (server returned HTTP ${response.status})`
+    : text.slice(0, 300);
+}
+
 function readRequiredMetric(headers: Headers, name: string): number {
   const rawValue = headers.get(name);
   if (rawValue === null) {
@@ -64,8 +88,7 @@ export default function StudioPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error ?? 'Analysis failed');
+        throw new Error(await readApiError(response, 'Analysis failed'));
       }
 
       const data = await response.json();
@@ -140,8 +163,7 @@ export default function StudioPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error ?? 'Enhancement failed');
+        throw new Error(await readApiError(response, 'Enhancement failed'));
       }
 
       const measuredMetrics: DisplayMetrics = {
