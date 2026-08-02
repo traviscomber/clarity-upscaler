@@ -1,14 +1,20 @@
-import { enhanceImage, validateStrategy } from '@/lib/n3uralia/processing';
-import { evaluateEnhancement } from '@/lib/n3uralia/quality';
-import type { EnhancementStrategy } from '@/lib/n3uralia/engine';
+import {
+  processImage,
+  type EnhancementStrategy,
+} from '@/lib/n3uralia/engine';
+import { validateStrategy } from '@/lib/n3uralia/processing';
+
+function encodeHeaderJson(value: unknown): string {
+  return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
+}
 
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const file = formData.get('image') as File;
-    const strategyJson = formData.get('strategy') as string;
+    const file = formData.get('image');
+    const strategyJson = formData.get('strategy');
 
-    if (!file || !strategyJson) {
+    if (!(file instanceof File) || typeof strategyJson !== 'string') {
       return Response.json(
         { error: 'Missing image or strategy' },
         { status: 400 },
@@ -17,7 +23,7 @@ export async function POST(request: Request) {
 
     let strategy: EnhancementStrategy;
     try {
-      strategy = JSON.parse(strategyJson);
+      strategy = JSON.parse(strategyJson) as EnhancementStrategy;
     } catch {
       return Response.json(
         { error: 'Invalid strategy JSON' },
@@ -42,19 +48,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const startTime = Date.now();
-    const enhanced = await enhanceImage(buffer, strategy);
-    const metrics = await evaluateEnhancement(buffer, enhanced.buffer);
-    const processingTime = Date.now() - startTime;
+    const result = await processImage(buffer, { strategy });
+    const { enhancement, metrics, benchmark, pipeline } = result;
 
     const responseHeaders = {
-      'Content-Type': enhanced.contentType,
-      'Content-Length': String(enhanced.buffer.length),
-      'X-Processing-Time': String(processingTime),
-      'X-Original-Size': String(buffer.length),
-      'X-Enhanced-Size': String(enhanced.buffer.length),
-      'X-Output-Width': String(enhanced.width),
-      'X-Output-Height': String(enhanced.height),
+      'Content-Type': enhancement.contentType,
+      'Content-Length': String(enhancement.buffer.length),
+      'X-Engine-Version': result.engineVersion,
+      'X-Processing-Time': String(result.processingTime),
+      'X-Enhancement-Time': String(result.enhancementTime),
+      'X-Evaluation-Time': String(result.evaluationTime),
+      'X-Original-Size': String(result.originalSize),
+      'X-Enhanced-Size': String(result.enhancedSize),
+      'X-Output-Width': String(enhancement.width),
+      'X-Output-Height': String(enhancement.height),
       'X-Scale-Factor': String(strategy.scaleFactor),
       'X-Model': strategy.model,
       'X-Metrics-Method': metrics.method,
@@ -65,9 +72,43 @@ export async function POST(request: Request) {
       'X-Tone-Preservation': String(
         Math.round(metrics.tonePreservation * 10000) / 100,
       ),
+      'X-Tiled-Processing': String(enhancement.tiled),
+      'X-Tile-Plan': enhancement.tilePlan
+        ? encodeHeaderJson(enhancement.tilePlan)
+        : '',
+      'X-Benchmark-Id': benchmark.id,
+      'X-Input-Checksum': benchmark.input.checksum,
+      'X-Output-Checksum': benchmark.output.checksum,
+      'X-Pipeline-Steps': encodeHeaderJson(pipeline.steps),
+      'X-Benchmark-Record': encodeHeaderJson(benchmark),
+      'Access-Control-Expose-Headers': [
+        'X-Engine-Version',
+        'X-Processing-Time',
+        'X-Enhancement-Time',
+        'X-Evaluation-Time',
+        'X-Original-Size',
+        'X-Enhanced-Size',
+        'X-Output-Width',
+        'X-Output-Height',
+        'X-Scale-Factor',
+        'X-Model',
+        'X-Metrics-Method',
+        'X-Fidelity',
+        'X-Detail',
+        'X-Preservation',
+        'X-Detail-Gain',
+        'X-Tone-Preservation',
+        'X-Tiled-Processing',
+        'X-Tile-Plan',
+        'X-Benchmark-Id',
+        'X-Input-Checksum',
+        'X-Output-Checksum',
+        'X-Pipeline-Steps',
+        'X-Benchmark-Record',
+      ].join(', '),
     };
 
-    return new Response(new Uint8Array(enhanced.buffer), {
+    return new Response(new Uint8Array(enhancement.buffer), {
       headers: responseHeaders,
     });
   } catch (error) {
