@@ -20,12 +20,17 @@ import {
   type PipelineRunResult,
   type PipelineStep,
 } from './pipeline-scheduler';
-import { enhanceImage, type EnhanceOutput } from './processing';
+import type { EnhanceOutput } from './processing';
 import {
   evaluateEnhancement,
   type EnhancementMetrics,
 } from './quality';
 import { selectStrategy } from './strategy';
+import {
+  runSuperResolution,
+  type SuperResolutionBackendId,
+  type SuperResolutionResult,
+} from './super-resolution';
 
 export interface ImageSignals {
   brightness: number;
@@ -60,6 +65,7 @@ export interface EnhancementStrategy {
   sharpen?: number;
   dynamic?: number;
   tile_overlap?: number;
+  superResolutionBackend?: SuperResolutionBackendId;
 }
 
 export interface ProcessImageOptions {
@@ -114,11 +120,25 @@ function createDefaultPipeline(
       id: 'enhance-image',
       stage: 'enhancement',
       execute: (context) =>
-        enhanceImage(context.workingBuffer, context.strategy!),
+        runSuperResolution({
+          imageBuffer: context.workingBuffer,
+          strategy: context.strategy!,
+        }),
       apply: (context, result) => {
-        const enhancement = result as EnhanceOutput;
+        const enhancement = result as SuperResolutionResult;
         context.enhancement = enhancement;
         context.workingBuffer = enhancement.buffer;
+        context.logs.push({
+          timestamp: Date.now(),
+          stage: 'enhancement',
+          message: enhancement.neural
+            ? `Neural super-resolution completed with ${enhancement.backend}`
+            : `Classical enhancement completed${
+                enhancement.fallbackReason
+                  ? `; fallback: ${enhancement.fallbackReason}`
+                  : ''
+              }`,
+        });
       },
     },
     {
