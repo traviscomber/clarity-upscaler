@@ -72,6 +72,9 @@ export async function POST(request: Request) {
       inputChecksum: benchmark.input.checksum,
       outputChecksum: benchmark.output.checksum,
       metricMethod: metrics.method,
+      backend: enhancement.backend,
+      neural: enhancement.neural,
+      neuralModelId: enhancement.modelId ?? null,
     };
 
     const exposedHeaders = [
@@ -99,6 +102,10 @@ export async function POST(request: Request) {
       'X-Output-Checksum',
       'X-Pipeline-Steps',
       'X-Export-Format',
+      'X-SR-Backend',
+      'X-SR-Neural',
+      'X-SR-Model-Id',
+      'X-SR-Fallback-Reason',
     ];
 
     const responseHeaders = {
@@ -140,6 +147,10 @@ export async function POST(request: Request) {
         })),
       ),
       'X-Export-Format': shouldExportLossless ? 'png-lossless' : enhancement.format,
+      'X-SR-Backend': enhancement.backend,
+      'X-SR-Neural': String(enhancement.neural),
+      'X-SR-Model-Id': enhancement.modelId ?? '',
+      'X-SR-Fallback-Reason': enhancement.fallbackReason ?? '',
       'Access-Control-Expose-Headers': exposedHeaders.join(', '),
     };
 
