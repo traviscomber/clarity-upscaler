@@ -6,6 +6,12 @@ import { Download } from 'lucide-react';
 interface BeforeAfterProps {
   beforeImage: string;
   afterImage: string;
+  backend?: {
+    id: string;
+    neural: boolean;
+    modelId?: string;
+    fallbackReason?: string;
+  };
   metrics?: {
     fidelity: number;
     detail: number;
@@ -24,6 +30,7 @@ function getDownloadExtension(dataUrl: string): string {
 export default function BeforeAfter({
   beforeImage,
   afterImage,
+  backend,
   metrics,
 }: BeforeAfterProps) {
   const handleDownload = () => {
@@ -67,6 +74,22 @@ export default function BeforeAfter({
           <p className="mt-1 text-xs text-[#8b8278]">
             Original and upscaled image shown side by side.
           </p>
+          {backend && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={`rounded-full border px-2.5 py-1 font-medium ${
+                  backend.neural
+                    ? 'border-[#d4a574]/50 bg-[#d4a574]/10 text-[#d4a574]'
+                    : 'border-[#3a3530] bg-[#2d2620] text-[#8b8278]'
+                }`}
+              >
+                {backend.neural ? 'Neural ONNX' : 'Classical CPU'}
+              </span>
+              {backend.modelId && (
+                <span className="text-[#8b8278]">{backend.modelId}</span>
+              )}
+            </div>
+          )}
         </div>
 
         <button
@@ -78,6 +101,12 @@ export default function BeforeAfter({
           Download upscaled
         </button>
       </div>
+
+      {backend?.fallbackReason && (
+        <div className="mb-5 rounded-lg border border-[#d4a574]/20 bg-[#2d2620] px-4 py-3 text-xs text-[#8b8278]">
+          Neural fallback: {backend.fallbackReason}
+        </div>
+      )}
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         <figure className="overflow-hidden rounded-lg border border-[#3a3530] bg-[#2d2620]">
