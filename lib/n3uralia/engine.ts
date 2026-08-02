@@ -20,7 +20,6 @@ import {
   type PipelineRunResult,
   type PipelineStep,
 } from './pipeline-scheduler';
-import type { EnhanceOutput } from './processing';
 import {
   evaluateEnhancement,
   type EnhancementMetrics,
@@ -77,7 +76,7 @@ export interface ProcessImageOptions {
 export interface EnhancementResult {
   analysis: ImageAnalysis;
   strategy: EnhancementStrategy;
-  enhancement: EnhanceOutput;
+  enhancement: SuperResolutionResult;
   metrics: EnhancementMetrics;
   benchmark: BenchmarkRecord;
   pipeline: PipelineRunResult;
