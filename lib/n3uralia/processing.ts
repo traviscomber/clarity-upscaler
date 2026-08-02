@@ -20,6 +20,10 @@ export interface EnhanceOutput {
   format: 'jpeg' | 'png' | 'webp';
   contentType: string;
   tiled: boolean;
+  tileCount: number;
+  requestedScaleFactor: number;
+  appliedScaleFactor: number;
+  outputClamped: boolean;
   tilePlan?: Pick<TilePlan, 'tileSize' | 'overlap' | 'rows' | 'columns'>;
 }
 
@@ -209,12 +213,15 @@ export async function enhanceImage(
     throw new Error('Unable to read image dimensions');
   }
 
-  let targetWidth = Math.round(sourceWidth * strategy.scaleFactor);
-  let targetHeight = Math.round(sourceHeight * strategy.scaleFactor);
-  const targetPixels = targetWidth * targetHeight;
+  const requestedTargetWidth = Math.round(sourceWidth * strategy.scaleFactor);
+  const requestedTargetHeight = Math.round(sourceHeight * strategy.scaleFactor);
+  let targetWidth = requestedTargetWidth;
+  let targetHeight = requestedTargetHeight;
+  const requestedTargetPixels = targetWidth * targetHeight;
+  const outputClamped = requestedTargetPixels > MAX_OUTPUT_PIXELS;
 
-  if (targetPixels > MAX_OUTPUT_PIXELS) {
-    const ratio = Math.sqrt(MAX_OUTPUT_PIXELS / targetPixels);
+  if (outputClamped) {
+    const ratio = Math.sqrt(MAX_OUTPUT_PIXELS / requestedTargetPixels);
     targetWidth = Math.max(1, Math.round(targetWidth * ratio));
     targetHeight = Math.max(1, Math.round(targetHeight * ratio));
   }
@@ -225,8 +232,7 @@ export async function enhanceImage(
       sourceWidth,
       sourceHeight,
       TILE_SOURCE_PIXEL_THRESHOLD,
-    ) ||
-    sourceWidth * sourceHeight * strategy.scaleFactor ** 2 > MAX_OUTPUT_PIXELS;
+    ) || requestedTargetPixels > MAX_OUTPUT_PIXELS;
   const speed = strategy.qualityTarget === 'speed';
 
   let resizedBuffer: Buffer;
@@ -311,6 +317,10 @@ export async function enhanceImage(
     format: outputFormat,
     contentType,
     tiled: useTiles,
+    tileCount: tilePlan?.tiles.length ?? 0,
+    requestedScaleFactor: strategy.scaleFactor,
+    appliedScaleFactor: Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight),
+    outputClamped,
     tilePlan: tilePlan
       ? {
           tileSize: tilePlan.tileSize,
