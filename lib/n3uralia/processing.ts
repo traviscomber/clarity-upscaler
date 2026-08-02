@@ -1,10 +1,17 @@
 /**
  * N3uralia Processing Pipeline
- * Deterministic Sharp/libvips enhancement with materialized progressive stages.
+ * Deterministic Sharp/libvips enhancement with materialized progressive stages
+ * and overlap-aware tiled execution for large images.
  */
 
 import sharp from 'sharp';
 import type { EnhancementStrategy } from './engine';
+import {
+  createTilePlan,
+  recommendTileOptions,
+  shouldUseTiles,
+  type TilePlan,
+} from './tile-engine';
 
 export interface EnhanceOutput {
   buffer: Buffer;
@@ -12,9 +19,12 @@ export interface EnhanceOutput {
   height: number;
   format: 'jpeg' | 'png' | 'webp';
   contentType: string;
+  tiled: boolean;
+  tilePlan?: Pick<TilePlan, 'tileSize' | 'overlap' | 'rows' | 'columns'>;
 }
 
 const MAX_OUTPUT_PIXELS = 40_000_000;
+const TILE_SOURCE_PIXEL_THRESHOLD = 16_000_000;
 
 function getPhilzProfile(strategy: EnhancementStrategy): {
   sharpenSigma: number;
@@ -72,6 +82,114 @@ async function materializeResizeStages(
   return currentBuffer;
 }
 
+async function resizeTile(
+  sourceBuffer: Buffer,
+  tile: TilePlan['tiles'][number],
+  scaleX: number,
+  scaleY: number,
+  speed: boolean,
+  denoiseRadius?: number,
+): Promise<{ input: Buffer; left: number; top: number }> {
+  let tilePipeline = sharp(sourceBuffer, { failOn: 'none' }).extract({
+    left: tile.left,
+    top: tile.top,
+    width: tile.width,
+    height: tile.height,
+  });
+
+  if (denoiseRadius) {
+    tilePipeline = tilePipeline.median(denoiseRadius);
+  }
+
+  const extracted = await tilePipeline.toBuffer();
+  const scaledTileWidth = Math.max(1, Math.round(tile.width * scaleX));
+  const scaledTileHeight = Math.max(1, Math.round(tile.height * scaleY));
+  const steps = speed
+    ? [[scaledTileWidth, scaledTileHeight] as [number, number]]
+    : buildUpscaleSteps(
+        tile.width,
+        tile.height,
+        scaledTileWidth,
+        scaledTileHeight,
+      );
+  const resized = await materializeResizeStages(extracted, steps);
+
+  const cropLeft = Math.round(tile.cropLeft * scaleX);
+  const cropTop = Math.round(tile.cropTop * scaleY);
+  const coreWidth = Math.max(1, Math.round(tile.coreWidth * scaleX));
+  const coreHeight = Math.max(1, Math.round(tile.coreHeight * scaleY));
+  const cropped = await sharp(resized, { failOn: 'none' })
+    .extract({
+      left: cropLeft,
+      top: cropTop,
+      width: Math.min(coreWidth, scaledTileWidth - cropLeft),
+      height: Math.min(coreHeight, scaledTileHeight - cropTop),
+    })
+    .png()
+    .toBuffer();
+
+  return {
+    input: cropped,
+    left: Math.round(tile.coreLeft * scaleX),
+    top: Math.round(tile.coreTop * scaleY),
+  };
+}
+
+async function tiledResize(
+  sourceBuffer: Buffer,
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+  strategy: EnhancementStrategy,
+  denoiseRadius?: number,
+): Promise<{ buffer: Buffer; plan: TilePlan }> {
+  const memoryMb = Number(process.env.N3URALIA_TILE_MEMORY_MB ?? 768);
+  const recommended = recommendTileOptions(
+    sourceWidth,
+    sourceHeight,
+    Number.isFinite(memoryMb) ? memoryMb : 768,
+  );
+  const requestedOverlap = strategy.tile_overlap;
+  const overlap = Number.isFinite(requestedOverlap)
+    ? Math.max(0, Math.round(requestedOverlap!))
+    : recommended.overlap;
+  const plan = createTilePlan(sourceWidth, sourceHeight, {
+    tileSize: recommended.tileSize,
+    overlap: Math.min(overlap, Math.floor((recommended.tileSize - 1) / 2)),
+  });
+  const scaleX = targetWidth / sourceWidth;
+  const scaleY = targetHeight / sourceHeight;
+  const composites: Array<{ input: Buffer; left: number; top: number }> = [];
+
+  for (const tile of plan.tiles) {
+    composites.push(
+      await resizeTile(
+        sourceBuffer,
+        tile,
+        scaleX,
+        scaleY,
+        strategy.qualityTarget === 'speed',
+        denoiseRadius,
+      ),
+    );
+  }
+
+  const buffer = await sharp({
+    create: {
+      width: targetWidth,
+      height: targetHeight,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite(composites)
+    .png()
+    .toBuffer();
+
+  return { buffer, plan };
+}
+
 export async function enhanceImage(
   imageBuffer: Buffer,
   strategy: EnhancementStrategy,
@@ -80,9 +198,10 @@ export async function enhanceImage(
     throw new Error('Invalid image buffer');
   }
 
-  const metadata = await sharp(imageBuffer, { failOn: 'none' })
+  const normalizedBuffer = await sharp(imageBuffer, { failOn: 'none' })
     .rotate()
-    .metadata();
+    .toBuffer();
+  const metadata = await sharp(normalizedBuffer, { failOn: 'none' }).metadata();
   const sourceWidth = metadata.width ?? 0;
   const sourceHeight = metadata.height ?? 0;
 
@@ -96,31 +215,52 @@ export async function enhanceImage(
 
   if (targetPixels > MAX_OUTPUT_PIXELS) {
     const ratio = Math.sqrt(MAX_OUTPUT_PIXELS / targetPixels);
-    targetWidth = Math.round(targetWidth * ratio);
-    targetHeight = Math.round(targetHeight * ratio);
+    targetWidth = Math.max(1, Math.round(targetWidth * ratio));
+    targetHeight = Math.max(1, Math.round(targetHeight * ratio));
   }
 
   const profile = getPhilzProfile(strategy);
+  const useTiles =
+    shouldUseTiles(
+      sourceWidth,
+      sourceHeight,
+      TILE_SOURCE_PIXEL_THRESHOLD,
+    ) ||
+    sourceWidth * sourceHeight * strategy.scaleFactor ** 2 > MAX_OUTPUT_PIXELS;
+  const speed = strategy.qualityTarget === 'speed';
 
-  let preparedBuffer = await sharp(imageBuffer, { failOn: 'none' })
-    .rotate()
-    .toBuffer();
+  let resizedBuffer: Buffer;
+  let tilePlan: TilePlan | undefined;
 
-  if (profile.denoise) {
-    preparedBuffer = await sharp(preparedBuffer, { failOn: 'none' })
-      .median(profile.denoiseRadius)
-      .toBuffer();
+  if (useTiles) {
+    const tiled = await tiledResize(
+      normalizedBuffer,
+      sourceWidth,
+      sourceHeight,
+      targetWidth,
+      targetHeight,
+      strategy,
+      profile.denoise ? profile.denoiseRadius : undefined,
+    );
+    resizedBuffer = tiled.buffer;
+    tilePlan = tiled.plan;
+  } else {
+    let preparedBuffer = normalizedBuffer;
+    if (profile.denoise) {
+      preparedBuffer = await sharp(preparedBuffer, { failOn: 'none' })
+        .median(profile.denoiseRadius)
+        .toBuffer();
+    }
+
+    const steps = speed
+      ? [[targetWidth, targetHeight] as [number, number]]
+      : buildUpscaleSteps(sourceWidth, sourceHeight, targetWidth, targetHeight);
+    resizedBuffer = await materializeResizeStages(preparedBuffer, steps);
   }
 
-  const speed = strategy.qualityTarget === 'speed';
-  const steps = speed
-    ? [[targetWidth, targetHeight] as [number, number]]
-    : buildUpscaleSteps(sourceWidth, sourceHeight, targetWidth, targetHeight);
-
-  const resizedBuffer = await materializeResizeStages(preparedBuffer, steps);
   let finalPipeline = sharp(resizedBuffer, { failOn: 'none' });
-
   let sigma = profile.sharpenSigma;
+
   if (strategy.qualityTarget === 'quality') {
     sigma *= 1.2;
   } else if (speed) {
@@ -157,6 +297,7 @@ export async function enhanceImage(
     contentType = 'image/webp';
   } else {
     outputBuffer = await finalPipeline
+      .flatten({ background: '#ffffff' })
       .jpeg({ quality: speed ? 84 : 94, mozjpeg: true })
       .toBuffer();
     outputFormat = 'jpeg';
@@ -169,6 +310,15 @@ export async function enhanceImage(
     height: targetHeight,
     format: outputFormat,
     contentType,
+    tiled: useTiles,
+    tilePlan: tilePlan
+      ? {
+          tileSize: tilePlan.tileSize,
+          overlap: tilePlan.overlap,
+          rows: tilePlan.rows,
+          columns: tilePlan.columns,
+        }
+      : undefined,
   };
 }
 
@@ -192,6 +342,13 @@ export function validateStrategy(
     strategy.preservationLevel > 1
   ) {
     errors.push('Preservation level must be between 0 and 1');
+  }
+
+  if (
+    strategy.tile_overlap !== undefined &&
+    (!Number.isFinite(strategy.tile_overlap) || strategy.tile_overlap < 0)
+  ) {
+    errors.push('Tile overlap must be a non-negative number');
   }
 
   return {
