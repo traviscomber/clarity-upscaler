@@ -73,17 +73,29 @@ export function constructHuggingFaceUrl(
 
 /**
  * Verify a Hugging Face model URL is accessible
+ * Optionally use HF token for private repositories
  */
-export async function verifyHuggingFaceModel(url: string): Promise<{
+export async function verifyHuggingFaceModel(
+  url: string,
+  token?: string,
+): Promise<{
   accessible: boolean;
   status?: number;
   contentLength?: number;
   contentType?: string;
 }> {
   try {
+    const headers: Record<string, string> = {};
+    
+    // Add authorization header if token provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(url, {
       method: 'HEAD',
       redirect: 'follow',
+      headers,
     });
     
     return {
@@ -101,14 +113,26 @@ export async function verifyHuggingFaceModel(url: string): Promise<{
 
 /**
  * Get model info from Hugging Face Hub API
+ * Supports both public and private repositories with token
  */
-export async function getHuggingFaceModelInfo(config: HuggingFaceModelConfig): Promise<{
+export async function getHuggingFaceModelInfo(
+  config: HuggingFaceModelConfig,
+  token?: string,
+): Promise<{
   exists: boolean;
   siblings?: Array<{ filename: string; size?: number }>;
 }> {
   try {
+    const headers: Record<string, string> = {};
+    
+    // Add authorization header if token provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(
       `https://huggingface.co/api/models/${config.repo}`,
+      { headers },
     );
     
     if (!response.ok) {

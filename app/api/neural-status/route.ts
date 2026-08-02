@@ -42,6 +42,7 @@ interface NeuralStatusResponse {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const probe = request.nextUrl.searchParams.has('probe');
+    const token = process.env.HUGGINGFACE_TOKEN;
     const response: NeuralStatusResponse = {
       ready: false,
       configured: false,
@@ -96,7 +97,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       response.probe = { attempted: true };
       
       try {
-        const verification = await verifyHuggingFaceModel(location);
+        // Use HF token if available (for private models)
+        const verification = await verifyHuggingFaceModel(location, token);
         response.probe.reachable = verification.accessible;
         
         if (verification.status) {
