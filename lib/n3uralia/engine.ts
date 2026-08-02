@@ -4,12 +4,19 @@
  */
 
 import { analyzeImage } from './analyzer';
-import { selectStrategy } from './strategy';
+import {
+  createEngineContext,
+  getStageDuration,
+  runEngineStage,
+  type EngineLogEntry,
+  type EngineTiming,
+} from './context';
 import { enhanceImage } from './processing';
 import {
   evaluateEnhancement,
   type EnhancementMetrics,
 } from './quality';
+import { selectStrategy } from './strategy';
 
 export interface ImageSignals {
   brightness: number;
@@ -51,11 +58,15 @@ export interface EnhancementResult {
   strategy: EnhancementStrategy;
   metrics: EnhancementMetrics;
   processingTime: number;
+  enhancementTime: number;
+  evaluationTime: number;
   originalSize: number;
   enhancedSize: number;
+  engineVersion: 'n3uralia-core-v1';
+  timings: EngineTiming[];
+  logs: EngineLogEntry[];
 }
 
-/** Process an image through analysis, planning, enhancement, and evaluation. */
 export async function processImage(
   imageBuffer: Buffer,
   options?: {
@@ -63,20 +74,43 @@ export async function processImage(
     qualityTarget?: 'speed' | 'balanced' | 'quality';
   },
 ): Promise<EnhancementResult> {
-  const startTime = Date.now();
+  const context = createEngineContext(imageBuffer);
 
-  const analysis = await analyzeImage(imageBuffer);
-  const strategy = selectStrategy(analysis, options);
-  const enhanced = await enhanceImage(imageBuffer, strategy);
-  const metrics = await evaluateEnhancement(imageBuffer, enhanced.buffer);
+  context.analysis = await runEngineStage(context, 'analysis', () =>
+    analyzeImage(context.originalBuffer),
+  );
+
+  context.strategy = await runEngineStage(context, 'planning', async () =>
+    selectStrategy(context.analysis!, options),
+  );
+
+  context.enhancement = await runEngineStage(context, 'enhancement', () =>
+    enhanceImage(context.workingBuffer, context.strategy!),
+  );
+  context.workingBuffer = context.enhancement.buffer;
+
+  context.metrics = await runEngineStage(context, 'evaluation', () =>
+    evaluateEnhancement(context.originalBuffer, context.workingBuffer),
+  );
+
+  context.logs.push({
+    timestamp: Date.now(),
+    stage: 'complete',
+    message: 'Engine pipeline completed',
+  });
 
   return {
-    analysis,
-    strategy,
-    metrics,
-    processingTime: Date.now() - startTime,
-    originalSize: imageBuffer.length,
-    enhancedSize: enhanced.buffer.length,
+    analysis: context.analysis,
+    strategy: context.strategy,
+    metrics: context.metrics,
+    processingTime: Date.now() - context.createdAt,
+    enhancementTime: getStageDuration(context, 'enhancement'),
+    evaluationTime: getStageDuration(context, 'evaluation'),
+    originalSize: context.originalSize,
+    enhancedSize: context.workingBuffer.length,
+    engineVersion: context.engineVersion,
+    timings: context.timings,
+    logs: context.logs,
   };
 }
 
