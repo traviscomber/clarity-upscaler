@@ -1,17 +1,26 @@
 /**
  * N3uralia Engine Interface
- * Deterministic image analysis, enhancement orchestration, and evaluation.
+ * Deterministic image analysis, scheduled enhancement, and measured evaluation.
  */
 
 import { analyzeImage } from './analyzer';
 import {
+  createBenchmarkRecord,
+  type BenchmarkRecord,
+} from './benchmark-recorder';
+import {
   createEngineContext,
   getStageDuration,
-  runEngineStage,
   type EngineLogEntry,
   type EngineTiming,
 } from './context';
-import { enhanceImage } from './processing';
+import {
+  runPipeline,
+  validatePipeline,
+  type PipelineRunResult,
+  type PipelineStep,
+} from './pipeline-scheduler';
+import { enhanceImage, type EnhanceOutput } from './processing';
 import {
   evaluateEnhancement,
   type EnhancementMetrics,
@@ -53,10 +62,19 @@ export interface EnhancementStrategy {
   tile_overlap?: number;
 }
 
+export interface ProcessImageOptions {
+  scaleFactor?: number;
+  qualityTarget?: 'speed' | 'balanced' | 'quality';
+  strategy?: EnhancementStrategy;
+}
+
 export interface EnhancementResult {
   analysis: ImageAnalysis;
   strategy: EnhancementStrategy;
+  enhancement: EnhanceOutput;
   metrics: EnhancementMetrics;
+  benchmark: BenchmarkRecord;
+  pipeline: PipelineRunResult;
   processingTime: number;
   enhancementTime: number;
   evaluationTime: number;
@@ -67,31 +85,76 @@ export interface EnhancementResult {
   logs: EngineLogEntry[];
 }
 
+function createDefaultPipeline(
+  options?: ProcessImageOptions,
+): PipelineStep[] {
+  return [
+    {
+      id: 'analyze-image',
+      stage: 'analysis',
+      execute: (context) => analyzeImage(context.originalBuffer),
+      apply: (context, result) => {
+        context.analysis = result as ImageAnalysis;
+      },
+    },
+    {
+      id: 'plan-enhancement',
+      stage: 'planning',
+      execute: async (context) =>
+        options?.strategy ??
+        selectStrategy(context.analysis!, {
+          scaleFactor: options?.scaleFactor,
+          qualityTarget: options?.qualityTarget,
+        }),
+      apply: (context, result) => {
+        context.strategy = result as EnhancementStrategy;
+      },
+    },
+    {
+      id: 'enhance-image',
+      stage: 'enhancement',
+      execute: (context) =>
+        enhanceImage(context.workingBuffer, context.strategy!),
+      apply: (context, result) => {
+        const enhancement = result as EnhanceOutput;
+        context.enhancement = enhancement;
+        context.workingBuffer = enhancement.buffer;
+      },
+    },
+    {
+      id: 'evaluate-output',
+      stage: 'evaluation',
+      execute: (context) =>
+        evaluateEnhancement(context.originalBuffer, context.workingBuffer),
+      apply: (context, result) => {
+        context.metrics = result as EnhancementMetrics;
+      },
+    },
+  ];
+}
+
 export async function processImage(
   imageBuffer: Buffer,
-  options?: {
-    scaleFactor?: number;
-    qualityTarget?: 'speed' | 'balanced' | 'quality';
-  },
+  options?: ProcessImageOptions,
 ): Promise<EnhancementResult> {
   const context = createEngineContext(imageBuffer);
+  const steps = createDefaultPipeline(options);
+  const pipelineErrors = validatePipeline(steps);
 
-  context.analysis = await runEngineStage(context, 'analysis', () =>
-    analyzeImage(context.originalBuffer),
-  );
+  if (pipelineErrors.length > 0) {
+    throw new Error(`Invalid engine pipeline: ${pipelineErrors.join('; ')}`);
+  }
 
-  context.strategy = await runEngineStage(context, 'planning', async () =>
-    selectStrategy(context.analysis!, options),
-  );
+  const pipeline = await runPipeline(context, steps);
 
-  context.enhancement = await runEngineStage(context, 'enhancement', () =>
-    enhanceImage(context.workingBuffer, context.strategy!),
-  );
-  context.workingBuffer = context.enhancement.buffer;
-
-  context.metrics = await runEngineStage(context, 'evaluation', () =>
-    evaluateEnhancement(context.originalBuffer, context.workingBuffer),
-  );
+  if (
+    !context.analysis ||
+    !context.strategy ||
+    !context.enhancement ||
+    !context.metrics
+  ) {
+    throw new Error('Engine pipeline completed without all required outputs');
+  }
 
   context.logs.push({
     timestamp: Date.now(),
@@ -99,10 +162,15 @@ export async function processImage(
     message: 'Engine pipeline completed',
   });
 
+  const benchmark = createBenchmarkRecord(context, pipeline);
+
   return {
     analysis: context.analysis,
     strategy: context.strategy,
+    enhancement: context.enhancement,
     metrics: context.metrics,
+    benchmark,
+    pipeline,
     processingTime: Date.now() - context.createdAt,
     enhancementTime: getStageDuration(context, 'enhancement'),
     evaluationTime: getStageDuration(context, 'evaluation'),
